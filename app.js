@@ -37,15 +37,17 @@ let state = loadState();
 const requirementForm = document.getElementById("requirementForm");
 const requirementListEl = document.getElementById("requirementList");
 const listCountEl = document.getElementById("listCount");
+const dashboardPanel = document.getElementById("dashboardPanel");
+const workspaceTabNav = document.getElementById("workspaceTabNav");
 const overviewPanel = document.getElementById("overviewPanel");
 const pipelinePanel = document.getElementById("pipelinePanel");
-const summaryPanel = document.getElementById("summaryPanel");
-const riskPanel = document.getElementById("riskPanel");
-const logPanel = document.getElementById("logPanel");
+const insightPanel = document.getElementById("insightPanel");
 const searchInput = document.getElementById("searchInput");
 const statusFilter = document.getElementById("statusFilter");
 const seedDataBtn = document.getElementById("seedDataBtn");
 const clearDataBtn = document.getElementById("clearDataBtn");
+let activeWorkspaceTab = "overview";
+let activePipelineStageId = null;
 
 bindEvents();
 render();
@@ -55,6 +57,8 @@ function bindEvents() {
   searchInput.addEventListener("input", renderRequirementList);
   statusFilter.addEventListener("change", renderRequirementList);
   requirementListEl.addEventListener("click", handleRequirementSelection);
+  dashboardPanel.addEventListener("click", handleDashboardAction);
+  workspaceTabNav.addEventListener("click", handleWorkspaceTabChange);
   pipelinePanel.addEventListener("click", handlePipelineAction);
   overviewPanel.addEventListener("click", handleOverviewAction);
   seedDataBtn.addEventListener("click", restoreSeedData);
@@ -90,8 +94,39 @@ function handleRequirementSelection(event) {
   }
 
   state.selectedRequirementId = card.dataset.requirementId;
+  activePipelineStageId = null;
   saveState();
   render();
+}
+
+function handleDashboardAction(event) {
+  const button = event.target.closest("[data-dashboard-action]");
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.dashboardAction;
+  if (action === "focus-requirement") {
+    const requirementId = button.dataset.requirementId;
+    if (!requirementId) {
+      return;
+    }
+
+    state.selectedRequirementId = requirementId;
+    activePipelineStageId = null;
+    saveState();
+    render();
+  }
+}
+
+function handleWorkspaceTabChange(event) {
+  const button = event.target.closest("[data-tab]");
+  if (!button) {
+    return;
+  }
+
+  activeWorkspaceTab = button.dataset.tab || "overview";
+  syncWorkspaceTabs();
 }
 
 function handleOverviewAction(event) {
@@ -107,6 +142,17 @@ function handleOverviewAction(event) {
 
   if (action === "continue") {
     startOrResumePipeline(requirement.id);
+    return;
+  }
+
+  if (action === "open-tab") {
+    const tab = event.target.dataset.tabTarget;
+    if (!tab) {
+      return;
+    }
+
+    activeWorkspaceTab = tab;
+    syncWorkspaceTabs();
   }
 }
 
@@ -125,6 +171,12 @@ function handlePipelineAction(event) {
 
   if (action === "execute") {
     executeStage(requirement.id, stageId, { manual: true });
+    return;
+  }
+
+  if (action === "focus-stage") {
+    activePipelineStageId = stageId;
+    renderSelectedRequirement();
     return;
   }
 
@@ -318,8 +370,148 @@ function hydrateRequirementStages(requirement, targetStageId) {
 }
 
 function render() {
+  renderDashboard();
   renderRequirementList();
   renderSelectedRequirement();
+}
+
+function renderDashboard() {
+  const requirements = state.requirements;
+  const waitingItems = getPendingActionItems();
+  const completedItems = [...requirements]
+    .filter((item) => item.overallStatus === "completed")
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, 3);
+
+  const totalCount = requirements.length;
+  const activeCount = requirements.filter((item) => item.overallStatus === "in_progress").length;
+  const blockedCount = requirements.filter((item) => item.overallStatus === "blocked").length;
+  const completedCount = requirements.filter((item) => item.overallStatus === "completed").length;
+  const reviewCount = requirements.filter((item) =>
+    item.stages.some((stage) => stage.status === "waiting_review")
+  ).length;
+
+  dashboardPanel.innerHTML = `
+    <div class="dashboard-shell">
+      <section class="dashboard-main">
+        <div class="dashboard-hero">
+          <div class="panel-heading">
+            <div>
+              <h2>工作台总览</h2>
+              <span class="hint">先看全局状态，再进入具体需求详情</span>
+            </div>
+          </div>
+          <div class="dashboard-hero-copy">
+            <h3>从全局视角管理需求交付</h3>
+            <p>
+              将需求发起、AI 推进、关键审核和交付沉淀聚合到一个视图里，减少切换成本，让负责人优先处理真正卡住的节点。
+            </p>
+          </div>
+          <div class="dashboard-stats">
+          <div class="stat-card accent-card">
+            <div class="stat-label">总需求数</div>
+            <div class="stat-value">${totalCount}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">进行中</div>
+            <div class="stat-value">${activeCount}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">待审核</div>
+            <div class="stat-value">${reviewCount}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">待处理</div>
+            <div class="stat-value">${blockedCount}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">已交付</div>
+            <div class="stat-value">${completedCount}</div>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-side">
+        <div class="dashboard-card">
+          <div class="panel-heading">
+            <div>
+              <h3>待处理事项</h3>
+              <span class="hint">优先处理待审核和被驳回的需求</span>
+            </div>
+          </div>
+          ${renderDashboardTodoList(waitingItems)}
+        </div>
+
+        <div class="dashboard-card">
+          <div class="panel-heading">
+            <div>
+              <h3>最近完成交付</h3>
+              <span class="hint">用于快速回看已完成案例</span>
+            </div>
+          </div>
+          ${renderDashboardCompletedList(completedItems)}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDashboardTodoList(items) {
+  if (!items.length) {
+    return `<div class="empty-state compact-empty">当前没有待处理事项，流程推进比较顺畅。</div>`;
+  }
+
+  return `
+    <div class="dashboard-list">
+      ${items
+        .map(
+          (item) => `
+          <button
+            class="dashboard-item"
+            data-dashboard-action="focus-requirement"
+            data-requirement-id="${item.requirement.id}"
+          >
+            <div class="dashboard-item-title">${escapeHtml(item.requirement.title)}</div>
+            <div class="dashboard-item-meta">
+              ${renderBadge(item.requirement.priority, PRIORITY_LABELS[item.requirement.priority], "priority")}
+              ${renderBadge(item.status, item.label)}
+            </div>
+            <div class="muted">${escapeHtml(item.description)}</div>
+          </button>
+        `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDashboardCompletedList(items) {
+  if (!items.length) {
+    return `<div class="empty-state compact-empty">当前还没有完成交付的需求。</div>`;
+  }
+
+  return `
+    <div class="dashboard-list">
+      ${items
+        .map(
+          (item) => `
+          <button
+            class="dashboard-item"
+            data-dashboard-action="focus-requirement"
+            data-requirement-id="${item.id}"
+          >
+            <div class="dashboard-item-title">${escapeHtml(item.title)}</div>
+            <div class="dashboard-item-meta">
+              ${renderBadge("completed", "已交付")}
+            </div>
+            <div class="muted">${formatDateTime(item.updatedAt)} · ${escapeHtml(item.owner)}</div>
+          </button>
+        `
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function renderRequirementList() {
@@ -341,8 +533,12 @@ function renderRequirementList() {
       const activeClass = req.id === state.selectedRequirementId ? "active" : "";
       return `
         <article class="requirement-item ${activeClass}" data-requirement-id="${req.id}">
-          <h3 class="requirement-title">${escapeHtml(req.title)}</h3>
+          <div class="requirement-item-head">
+            <h3 class="requirement-title">${escapeHtml(req.title)}</h3>
+            <span class="requirement-arrow">></span>
+          </div>
           <div class="muted">${escapeHtml(req.owner)} · ${formatDateTime(req.updatedAt)}</div>
+          <p class="requirement-summary">${escapeHtml(req.goal)}</p>
           <div class="meta-row">
             ${renderBadge(req.overallStatus, STATUS_LABELS[req.overallStatus] || req.overallStatus)}
             ${renderBadge(req.priority, PRIORITY_LABELS[req.priority] || req.priority, "priority")}
@@ -366,11 +562,11 @@ function renderSelectedRequirement() {
     return;
   }
 
+  ensurePipelineFocus(requirement);
+  syncWorkspaceTabs();
   renderOverview(requirement);
   renderPipeline(requirement);
-  renderSummary(requirement);
-  renderRisks(requirement);
-  renderLogs(requirement);
+  renderInsight(requirement);
 }
 
 function renderEmptyPanels() {
@@ -385,118 +581,222 @@ function renderEmptyPanels() {
 
   overviewPanel.innerHTML = emptyMarkup;
   pipelinePanel.innerHTML = emptyMarkup;
-  summaryPanel.innerHTML = emptyMarkup;
-  riskPanel.innerHTML = emptyMarkup;
-  logPanel.innerHTML = emptyMarkup;
+  insightPanel.innerHTML = emptyMarkup;
+  syncWorkspaceTabs();
 }
 
 function renderOverview(requirement) {
   const nextStage = getNextRunnableStage(requirement);
   const currentStage = getCurrentStage(requirement);
+  const blockingStage = getBlockingStage(requirement);
   const actionMarkup =
     nextStage && !hasBlockingStage(requirement)
       ? `<button class="primary-btn" data-action="continue">继续自动推进</button>`
       : "";
 
   overviewPanel.innerHTML = `
-    <div class="panel-heading">
-      <div>
-        <h2>${escapeHtml(requirement.title)}</h2>
-        <div class="meta-row">
-          ${renderBadge(requirement.overallStatus, STATUS_LABELS[requirement.overallStatus])}
-          ${renderBadge(requirement.priority, PRIORITY_LABELS[requirement.priority], "priority")}
+    <div class="overview-shell">
+      <div class="overview-hero-card">
+        <div class="panel-heading no-margin">
+          <div>
+            <div class="eyebrow subtle-eyebrow">Requirement Workspace</div>
+            <h2>${escapeHtml(requirement.title)}</h2>
+            <div class="meta-row">
+              ${renderBadge(requirement.overallStatus, STATUS_LABELS[requirement.overallStatus])}
+              ${renderBadge(requirement.priority, PRIORITY_LABELS[requirement.priority], "priority")}
+            </div>
+          </div>
+          ${actionMarkup}
+        </div>
+        <p class="overview-lead">${escapeHtml(requirement.goal)}</p>
+        <div class="overview-hero-actions">
+          <button class="ghost-btn" data-action="open-tab" data-tab-target="pipeline">查看流程编排</button>
+          <button class="ghost-btn" data-action="open-tab" data-tab-target="insight">查看交付洞察</button>
+        </div>
+        <div class="overview-grid">
+          <div class="stat-card">
+            <div class="stat-label">负责人</div>
+            <div class="stat-value">${escapeHtml(requirement.owner)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">当前节点</div>
+            <div class="stat-value">${escapeHtml(currentStage.name)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">更新时间</div>
+            <div class="stat-value">${formatDateTime(requirement.updatedAt)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">完成进度</div>
+            <div class="stat-value">${getCompletionText(requirement)}</div>
+          </div>
         </div>
       </div>
-      ${actionMarkup}
-    </div>
 
-    <div class="overview-grid">
-      <div class="stat-card">
-        <div class="stat-label">负责人</div>
-        <div class="stat-value">${escapeHtml(requirement.owner)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">当前节点</div>
-        <div class="stat-value">${escapeHtml(currentStage.name)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">更新时间</div>
-        <div class="stat-value">${formatDateTime(requirement.updatedAt)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">完成进度</div>
-        <div class="stat-value">${getCompletionText(requirement)}</div>
-      </div>
-    </div>
+      <div class="overview-details-grid">
+        <div class="description-card">
+          <div class="panel-heading">
+            <h3>业务背景</h3>
+          </div>
+          <p>${escapeHtml(requirement.background)}</p>
+        </div>
 
-    <div class="description-card">
-      <div class="panel-heading">
-        <h3>背景</h3>
+        <div class="description-card emphasis-card">
+          <div class="panel-heading">
+            <h3>当前关注点</h3>
+          </div>
+          <p><strong>当前节点：</strong>${escapeHtml(currentStage.name)}</p>
+          <p><strong>推进状态：</strong>${escapeHtml(
+            blockingStage
+              ? `${blockingStage.name} 需要处理`
+              : nextStage
+                ? `下一步可推进到 ${nextStage.name}`
+                : "当前流程已接近完成"
+          )}</p>
+          <p><strong>约束：</strong>${escapeHtml(requirement.constraints)}</p>
+        </div>
       </div>
-      <p>${escapeHtml(requirement.background)}</p>
-    </div>
-
-    <div class="description-card">
-      <div class="panel-heading">
-        <h3>目标与约束</h3>
-      </div>
-      <p><strong>目标：</strong>${escapeHtml(requirement.goal)}</p>
-      <p><strong>约束：</strong>${escapeHtml(requirement.constraints)}</p>
     </div>
   `;
 }
 
 function renderPipeline(requirement) {
+  const focusedStage = getFocusedPipelineStage(requirement);
+  const relation = getStageRelation(requirement, focusedStage.id);
+  const blockerText = getStageBlockerText(requirement, focusedStage);
   pipelinePanel.innerHTML = `
-    <div class="panel-heading">
-      <div>
-        <h2>Pipeline 看板</h2>
-        <span class="hint">自动推进普通节点，方案设计和评审确认需要人工审核</span>
+    <div class="pipeline-shell">
+      <div class="pipeline-focus-card">
+        <div class="panel-heading">
+          <div>
+            <h2>Pipeline 看板</h2>
+            <span class="hint">自动推进普通节点，方案设计和评审确认需要人工审核</span>
+          </div>
+          <span class="pipeline-count">${requirement.stages.length} 个阶段</span>
+        </div>
+        <div class="pipeline-focus-meta">
+          <div>
+            <div class="focus-label">当前聚焦阶段</div>
+            <div class="focus-title-row">
+              <h3>${escapeHtml(focusedStage.name)}</h3>
+              ${renderBadge(focusedStage.status, STATUS_LABELS[focusedStage.status] || focusedStage.status)}
+            </div>
+            <div class="focus-relationship">
+              <div class="relation-pill">
+                <span class="relation-caption">上游</span>
+                <strong>${escapeHtml(relation.previous || "流程起点")}</strong>
+              </div>
+              <div class="relation-pill relation-pill-active">
+                <span class="relation-caption">当前</span>
+                <strong>${escapeHtml(focusedStage.name)}</strong>
+              </div>
+              <div class="relation-pill">
+                <span class="relation-caption">下游</span>
+                <strong>${escapeHtml(relation.next || "交付完成")}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="focus-summary">
+            ${escapeHtml(getStagePreview(focusedStage.output, 180))}
+          </div>
+        </div>
+        <div class="focus-insight-strip">
+          <div class="focus-insight-card">
+            <span class="focus-insight-label">阶段说明</span>
+            <p>${escapeHtml(getStageMeaning(focusedStage.id))}</p>
+          </div>
+          <div class="focus-insight-card">
+            <span class="focus-insight-label">当前阻塞</span>
+            <p>${escapeHtml(blockerText)}</p>
+          </div>
+        </div>
+        <div class="pipeline-stage-nav">
+          ${requirement.stages
+            .map(
+              (stage, index) => `
+              <button
+                class="pipeline-stage-chip ${stage.id === activePipelineStageId ? "active" : ""}"
+                data-action="focus-stage"
+                data-stage-id="${stage.id}"
+              >
+                <span class="chip-index">${index + 1}</span>
+                <span class="chip-text">${escapeHtml(stage.name)}</span>
+              </button>
+            `
+            )
+            .join("")}
+        </div>
       </div>
-    </div>
-    <div class="pipeline-grid">
-      ${requirement.stages.map((stage) => renderStageCard(requirement, stage)).join("")}
+
+      <div class="pipeline-grid refined-pipeline">
+        ${requirement.stages.map((stage, index) => renderStageCard(requirement, stage, index)).join("")}
+      </div>
     </div>
   `;
 }
 
-function renderStageCard(requirement, stage) {
+function renderStageCard(requirement, stage, index) {
+  const isFocused = activePipelineStageId === stage.id;
   const activeClass = requirement.currentStageId === stage.id ? "active" : "";
   const canExecute = canExecuteStage(requirement, stage.id);
+  const relation = getStageRelation(requirement, stage.id);
   const output = stage.output
-    ? `<div class="output-box">${escapeHtml(stage.output)}</div>`
+    ? `<div class="output-box">${escapeHtml(isFocused ? stage.output : getStagePreview(stage.output, 180))}</div>`
     : `<div class="output-box muted">该节点还没有产出内容。</div>`;
 
   return `
-    <article class="stage-card ${activeClass}">
-      <div class="stage-header">
-        <div class="stage-title-wrap">
-          <h3>${escapeHtml(stage.name)}</h3>
-          <div class="stage-meta">最近更新：${formatDateTime(stage.updatedAt)}</div>
+    <article class="stage-card ${activeClass} ${isFocused ? "focused" : "compact"}">
+      <div class="stage-rail">
+        <div class="stage-index">${index + 1}</div>
+        <div class="stage-line"></div>
+      </div>
+      <div class="stage-body">
+        <div class="stage-header">
+          <div class="stage-title-wrap">
+            <div class="stage-kicker">Stage ${index + 1}</div>
+            <h3>${escapeHtml(stage.name)}</h3>
+            <div class="stage-meta">最近更新：${formatDateTime(stage.updatedAt)}</div>
+          </div>
+          ${renderBadge(stage.status, STATUS_LABELS[stage.status] || stage.status)}
         </div>
-        ${renderBadge(stage.status, STATUS_LABELS[stage.status] || stage.status)}
-      </div>
 
-      <div class="stage-output">
-        ${output}
-      </div>
+        <div class="stage-output">
+          ${output}
+        </div>
 
-      ${renderStageActions(stage, canExecute)}
+        <div class="stage-mini-meta">
+          <span>上游：${escapeHtml(relation.previous || "流程起点")}</span>
+          <span>下游：${escapeHtml(relation.next || "交付完成")}</span>
+        </div>
 
-      <div class="note-editor">
-        <label>
-          <span class="hint">人工备注 / 补充上下文</span>
-          <textarea data-note-stage-id="${stage.id}" placeholder="记录人工修改、驳回原因或补充约束...">${escapeHtml(
-            stage.note || ""
-          )}</textarea>
-        </label>
-        <button class="secondary-btn" data-action="save-note" data-stage-id="${stage.id}">保存备注</button>
+        <div class="stage-actions">
+          <button class="ghost-btn" data-action="focus-stage" data-stage-id="${stage.id}">
+            ${isFocused ? "已聚焦" : "聚焦此阶段"}
+          </button>
+          ${renderStageActions(stage, canExecute, true)}
+        </div>
+
+        ${
+          isFocused
+            ? `
+          <div class="note-editor">
+            <label>
+              <span class="hint">人工备注 / 补充上下文</span>
+              <textarea data-note-stage-id="${stage.id}" placeholder="记录人工修改、驳回原因或补充约束...">${escapeHtml(
+                stage.note || ""
+              )}</textarea>
+            </label>
+            <button class="secondary-btn" data-action="save-note" data-stage-id="${stage.id}">保存备注</button>
+          </div>
+        `
+            : ""
+        }
       </div>
     </article>
   `;
 }
 
-function renderStageActions(stage, canExecute) {
+function renderStageActions(stage, canExecute, inline = false) {
   const actions = [];
 
   if (canExecute) {
@@ -524,93 +824,94 @@ function renderStageActions(stage, canExecute) {
     actions.push(`<button class="ghost-btn" disabled>正在生成中...</button>`);
   }
 
-  return actions.length ? `<div class="stage-actions">${actions.join("")}</div>` : "";
+  if (!actions.length) {
+    return "";
+  }
+
+  return inline ? actions.join("") : `<div class="stage-actions">${actions.join("")}</div>`;
 }
 
-function renderSummary(requirement) {
-  summaryPanel.innerHTML = `
-    <div class="panel-heading">
-      <div>
-        <h2>交付摘要</h2>
-        <span class="hint">当流程完成后，这里会沉淀最终交付结果</span>
-      </div>
-    </div>
-    <div class="delivery-summary">
-      <div class="summary-box">
-        <p>${escapeHtml(
-          requirement.deliverySummary ||
-            "当前尚未完成交付。你可以先审核方案设计节点，让流程继续自动推进。"
-        )}</p>
-      </div>
-    </div>
-  `;
-}
-
-function renderRisks(requirement) {
+function renderInsight(requirement) {
   const riskItems = requirement.stages.flatMap((stage) =>
     (stage.risks || []).map((risk) => ({
       stageName: stage.name,
       text: risk,
     }))
   );
-
-  if (!riskItems.length) {
-    riskPanel.innerHTML = `
-      <div class="panel-heading">
-        <h2>风险提示</h2>
-      </div>
-      <div class="empty-state">当前没有高风险提示。随着流程推进，分析、方案和评审阶段会动态产生风险项。</div>
-    `;
-    return;
-  }
-
-  riskPanel.innerHTML = `
-    <div class="panel-heading">
-      <h2>风险提示</h2>
-    </div>
-    <div class="risk-list">
-      ${riskItems
-        .map(
-          (risk) => `
-          <div class="risk-item">
-            <span class="risk-stage">${escapeHtml(risk.stageName)}</span>
-            <p>${escapeHtml(risk.text)}</p>
-          </div>
-        `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderLogs(requirement) {
   const logs = [...requirement.logs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  if (!logs.length) {
-    logPanel.innerHTML = `
-      <div class="panel-heading">
-        <h2>执行日志</h2>
-      </div>
-      <div class="empty-state">当前没有日志记录。</div>
-    `;
-    return;
-  }
+  insightPanel.innerHTML = `
+    <div class="insight-grid">
+      <section class="insight-card delivery-card">
+        <div class="panel-heading">
+          <div>
+            <h2>交付摘要</h2>
+            <span class="hint">沉淀最终交付结果和可继续推进的方向</span>
+          </div>
+        </div>
+        <div class="delivery-summary">
+          <div class="summary-box">
+            <p>${escapeHtml(
+              requirement.deliverySummary ||
+                "当前尚未完成交付。你可以先审核方案设计节点，让流程继续自动推进。"
+            )}</p>
+          </div>
+        </div>
+      </section>
 
-  logPanel.innerHTML = `
-    <div class="panel-heading">
-      <h2>执行日志</h2>
-    </div>
-    <div class="log-list">
-      ${logs
-        .map(
-          (log) => `
-          <div class="log-item">
-            <time>${formatDateTime(log.createdAt)} · ${escapeHtml(getStageName(log.stageId))}</time>
-            <p>${escapeHtml(log.message)}</p>
+      <section class="insight-card">
+        <div class="panel-heading">
+          <div>
+            <h2>风险提示</h2>
+            <span class="hint">用于发现当前流程中的关键阻塞点</span>
+          </div>
+        </div>
+        ${
+          riskItems.length
+            ? `
+          <div class="risk-list">
+            ${riskItems
+              .map(
+                (risk) => `
+                <div class="risk-item">
+                  <span class="risk-stage">${escapeHtml(risk.stageName)}</span>
+                  <p>${escapeHtml(risk.text)}</p>
+                </div>
+              `
+              )
+              .join("")}
           </div>
         `
-        )
-        .join("")}
+            : `<div class="empty-state compact-empty">当前没有高风险提示。随着流程推进，分析、方案和评审阶段会动态产生风险项。</div>`
+        }
+      </section>
+
+      <section class="insight-card full-span">
+        <div class="panel-heading">
+          <div>
+            <h2>执行日志</h2>
+            <span class="hint">完整记录节点执行、审核和重跑过程</span>
+          </div>
+        </div>
+        ${
+          logs.length
+            ? `
+          <div class="log-list">
+            ${logs
+              .map(
+                (log) => `
+                <div class="log-item">
+                  <time>${formatDateTime(log.createdAt)} · ${escapeHtml(getStageName(log.stageId))}</time>
+                  <p>${escapeHtml(log.message)}</p>
+                </div>
+              `
+              )
+              .join("")}
+          </div>
+        `
+            : `<div class="empty-state compact-empty">当前没有日志记录。</div>`
+        }
+      </section>
     </div>
   `;
 }
@@ -979,6 +1280,121 @@ function hasBlockingStage(requirement) {
   );
 }
 
+function getBlockingStage(requirement) {
+  return (
+    requirement.stages.find((stage) => stage.status === "waiting_review") ||
+    requirement.stages.find((stage) => stage.status === "rejected") ||
+    requirement.stages.find((stage) => stage.status === "running") ||
+    null
+  );
+}
+
+function ensurePipelineFocus(requirement) {
+  const stageIds = new Set(requirement.stages.map((stage) => stage.id));
+  if (!activePipelineStageId || !stageIds.has(activePipelineStageId)) {
+    activePipelineStageId = requirement.currentStageId || requirement.stages[0]?.id || null;
+  }
+}
+
+function getFocusedPipelineStage(requirement) {
+  ensurePipelineFocus(requirement);
+  return getStage(requirement, activePipelineStageId) || requirement.stages[0];
+}
+
+function getStagePreview(output, maxLength = 180) {
+  if (!output) {
+    return "该节点还没有产出内容。";
+  }
+
+  const normalized = output.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength)}...`;
+}
+
+function getStageRelation(requirement, stageId) {
+  const index = requirement.stages.findIndex((stage) => stage.id === stageId);
+  if (index < 0) {
+    return { previous: null, next: null };
+  }
+
+  return {
+    previous: requirement.stages[index - 1]?.name || null,
+    next: requirement.stages[index + 1]?.name || null,
+  };
+}
+
+function getStageMeaning(stageId) {
+  const meaning = {
+    intake: "接收原始需求输入，建立统一需求上下文，形成后续流程的起点。",
+    analysis: "由 AI 提炼需求重点、澄清问题与验收目标，把模糊表达整理成可执行输入。",
+    solution: "生成方案草案、模块拆解与风险判断，是人机协同的关键决策点。",
+    coding: "围绕已确认方案给出实现建议、代码骨架或研发拆解，推动进入可落地阶段。",
+    testing: "生成测试清单与验收依据，提前暴露潜在问题，降低后续返工成本。",
+    review: "汇总代码、测试与方案一致性，形成交付前的质量把关节点。",
+    delivery: "沉淀交付摘要、风险记录与后续建议，形成完整交付闭环。",
+  };
+
+  return meaning[stageId] || "当前阶段负责承接上下游信息，推动需求持续向前流转。";
+}
+
+function getStageBlockerText(requirement, focusedStage) {
+  if (focusedStage.status === "waiting_review") {
+    return "该阶段已经生成结果，当前需要负责人进行审核或补充备注。";
+  }
+
+  if (focusedStage.status === "rejected") {
+    return "该阶段曾被驳回，建议补充上下文后从当前节点重跑。";
+  }
+
+  if (focusedStage.status === "running") {
+    return "系统正在为该阶段生成结果，等待本轮执行完成。";
+  }
+
+  if (focusedStage.status === "pending") {
+    const previous = getStageRelation(requirement, focusedStage.id).previous;
+    return previous ? `需等待上游阶段“${previous}”完成后才能推进。` : "当前阶段尚未启动。";
+  }
+
+  if (focusedStage.status === "completed" || focusedStage.status === "approved") {
+    const next = getStageRelation(requirement, focusedStage.id).next;
+    return next ? `当前阶段已完成，系统可继续推进到“${next}”。` : "当前阶段已完成，流程已接近结束。";
+  }
+
+  return "当前暂无明显阻塞。";
+}
+
+function getPendingActionItems() {
+  const items = [];
+
+  for (const requirement of state.requirements) {
+    const reviewStage = requirement.stages.find((stage) => stage.status === "waiting_review");
+    if (reviewStage) {
+      items.push({
+        requirement,
+        status: "waiting_review",
+        label: `待审核 · ${reviewStage.name}`,
+        description: `${reviewStage.name} 已生成结果，等待负责人确认。`,
+      });
+      continue;
+    }
+
+    const rejectedStage = requirement.stages.find((stage) => stage.status === "rejected");
+    if (rejectedStage) {
+      items.push({
+        requirement,
+        status: "rejected",
+        label: `已驳回 · ${rejectedStage.name}`,
+        description: "当前需求已被打回，建议补充备注后从当前节点重跑。",
+      });
+    }
+  }
+
+  return items.sort((a, b) => new Date(b.requirement.updatedAt) - new Date(a.requirement.updatedAt));
+}
+
 function getFilteredRequirements() {
   const keyword = searchInput.value.trim().toLowerCase();
   const status = statusFilter.value;
@@ -1090,6 +1506,23 @@ function createId(prefix) {
 
 function buildTimerKey(requirementId, stageId) {
   return `${requirementId}:${stageId}`;
+}
+
+function syncWorkspaceTabs() {
+  const panes = [
+    { id: "overview", element: overviewPanel },
+    { id: "pipeline", element: pipelinePanel },
+    { id: "insight", element: insightPanel },
+  ];
+
+  for (const button of workspaceTabNav.querySelectorAll("[data-tab]")) {
+    button.classList.toggle("active", button.dataset.tab === activeWorkspaceTab);
+  }
+
+  for (const pane of panes) {
+    pane.element.classList.toggle("is-active", pane.id === activeWorkspaceTab);
+    pane.element.classList.toggle("is-hidden", pane.id !== activeWorkspaceTab);
+  }
 }
 
 function stopAllTimers() {

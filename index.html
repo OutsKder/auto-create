@@ -3,123 +3,179 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>需求交付流程引擎 MVP</title>
+    <title>织界引擎 | AI 需求交付工作台</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">AI-Driven Delivery Engine</p>
-          <h1>需求交付流程引擎 MVP</h1>
-          <p class="subtitle">
-            用一个本地可运行的工作台，验证“需求 -> 方案 -> 编码 -> 测试 -> 评审 -> 交付”的 AI
-            驱动闭环。
-          </p>
-        </div>
-        <div class="topbar-actions">
-          <button id="seedDataBtn" class="ghost-btn">恢复示例数据</button>
-          <button id="clearDataBtn" class="danger-btn">清空本地数据</button>
-        </div>
-      </header>
-
-      <div class="workspace">
-        <aside class="sidebar panel">
-          <section class="panel-section">
-            <div class="section-heading">
-              <h2>新建需求</h2>
-              <span class="hint">创建后自动进入流程</span>
+      <div class="meteor-field" aria-hidden="true">
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+      </div>
+      <div class="app-frame">
+        <header class="topbar panel">
+          <div class="topbar-copy">
+            <div class="brand-line">
+              <div class="brand-mark" aria-hidden="true">
+                <span class="brand-orbit orbit-a"></span>
+                <span class="brand-orbit orbit-b"></span>
+                <span class="brand-core"></span>
+              </div>
+              <div class="brand-text-group">
+            <p class="eyebrow">ZHIJIE ENGINE</p>
+            <h1>织界引擎</h1>
+              </div>
             </div>
+            <p class="subtitle">
+              把需求、方案、编码、测试与交付织进同一条智能工作流。让灵感像进入梦境一样被展开，再被稳稳落到可执行的结果里。
+            </p>
+            <div class="hero-tags">
+              <span class="hero-tag">梦境感工作台</span>
+              <span class="hero-tag">Pipeline 编排</span>
+              <span class="hero-tag">Human-in-the-loop</span>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button id="seedDataBtn" class="ghost-btn">恢复示例数据</button>
+            <button id="clearDataBtn" class="danger-btn">清空本地数据</button>
+          </div>
+          <div class="hero-glow hero-glow-a"></div>
+          <div class="hero-glow hero-glow-b"></div>
+        </header>
 
-            <form id="requirementForm" class="form-grid">
-              <label>
-                <span>需求标题</span>
-                <input name="title" type="text" maxlength="80" required placeholder="例如：新增审批通知汇总能力" />
-              </label>
+        <section id="dashboardPanel" class="panel dashboard-panel"></section>
 
-              <label>
-                <span>需求背景</span>
-                <textarea
-                  name="background"
-                  rows="3"
-                  maxlength="300"
-                  required
-                  placeholder="当前流程痛点、用户场景、业务背景"
-                ></textarea>
-              </label>
+        <div class="workspace">
+          <aside class="sidebar">
+            <section class="panel section-card">
+              <section class="panel-section">
+                <div class="section-heading">
+                  <div>
+                    <h2>新建需求</h2>
+                    <span class="hint">创建后自动进入流程</span>
+                  </div>
+                </div>
 
-              <label>
-                <span>目标</span>
-                <textarea
-                  name="goal"
-                  rows="3"
-                  maxlength="300"
-                  required
-                  placeholder="希望最终达成什么结果"
-                ></textarea>
-              </label>
+                <form id="requirementForm" class="form-grid">
+                  <label>
+                    <span>需求标题</span>
+                    <input name="title" type="text" maxlength="80" required placeholder="例如：新增审批通知汇总能力" />
+                  </label>
 
-              <label>
-                <span>约束条件</span>
-                <textarea
-                  name="constraints"
-                  rows="2"
-                  maxlength="220"
-                  placeholder="时间限制、兼容性要求、依赖条件"
-                ></textarea>
-              </label>
+                  <label>
+                    <span>需求背景</span>
+                    <textarea
+                      name="background"
+                      rows="3"
+                      maxlength="300"
+                      required
+                      placeholder="当前流程痛点、用户场景、业务背景"
+                    ></textarea>
+                  </label>
 
-              <div class="inline-fields">
-                <label>
-                  <span>优先级</span>
-                  <select name="priority">
-                    <option value="high">高</option>
-                    <option value="medium" selected>中</option>
-                    <option value="low">低</option>
+                  <label>
+                    <span>目标</span>
+                    <textarea
+                      name="goal"
+                      rows="3"
+                      maxlength="300"
+                      required
+                      placeholder="希望最终达成什么结果"
+                    ></textarea>
+                  </label>
+
+                  <label>
+                    <span>约束条件</span>
+                    <textarea
+                      name="constraints"
+                      rows="2"
+                      maxlength="220"
+                      placeholder="时间限制、兼容性要求、依赖条件"
+                    ></textarea>
+                  </label>
+
+                  <div class="inline-fields">
+                    <label>
+                      <span>优先级</span>
+                      <select name="priority">
+                        <option value="high">高</option>
+                        <option value="medium" selected>中</option>
+                        <option value="low">低</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      <span>负责人</span>
+                      <input name="owner" type="text" maxlength="30" placeholder="例如：产品经理A" />
+                    </label>
+                  </div>
+
+                  <button type="submit" class="primary-btn">创建并启动流程</button>
+                </form>
+              </section>
+            </section>
+
+            <section class="panel section-card">
+              <section class="panel-section">
+                <div class="section-heading">
+                  <div>
+                    <h2>需求列表</h2>
+                    <span id="listCount" class="hint"></span>
+                  </div>
+                </div>
+
+                <div class="filters">
+                  <input id="searchInput" type="search" placeholder="搜索标题或负责人" />
+                  <select id="statusFilter">
+                    <option value="all">全部状态</option>
+                    <option value="draft">草稿</option>
+                    <option value="in_progress">进行中</option>
+                    <option value="blocked">待处理</option>
+                    <option value="completed">已完成</option>
                   </select>
-                </label>
+                </div>
 
-                <label>
-                  <span>负责人</span>
-                  <input name="owner" type="text" maxlength="30" placeholder="例如：产品经理A" />
-                </label>
+                <div id="requirementList" class="requirement-list"></div>
+              </section>
+            </section>
+          </aside>
+
+          <main class="main-content">
+            <section class="panel workspace-shell">
+              <div class="workspace-shell-head">
+                <div>
+                  <p class="workspace-kicker">Workspace</p>
+                  <h2>织界工作区</h2>
+                </div>
+                <div id="workspaceTabNav" class="workspace-nav">
+                  <button class="workspace-tab active" data-tab="overview">概览</button>
+                  <button class="workspace-tab" data-tab="pipeline">流程</button>
+                  <button class="workspace-tab" data-tab="insight">交付与洞察</button>
+                </div>
               </div>
 
-              <button type="submit" class="primary-btn">创建并启动流程</button>
-            </form>
-          </section>
-
-          <section class="panel-section">
-            <div class="section-heading">
-              <h2>需求列表</h2>
-              <span id="listCount" class="hint"></span>
-            </div>
-
-            <div class="filters">
-              <input id="searchInput" type="search" placeholder="搜索标题或负责人" />
-              <select id="statusFilter">
-                <option value="all">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="in_progress">进行中</option>
-                <option value="blocked">待处理</option>
-                <option value="completed">已完成</option>
-              </select>
-            </div>
-
-            <div id="requirementList" class="requirement-list"></div>
-          </section>
-        </aside>
-
-        <main class="main-content">
-          <section id="overviewPanel" class="panel"></section>
-          <section id="pipelinePanel" class="panel"></section>
-        </main>
-
-        <aside class="rightbar">
-          <section id="summaryPanel" class="panel"></section>
-          <section id="riskPanel" class="panel"></section>
-          <section id="logPanel" class="panel"></section>
-        </aside>
+              <div class="workspace-body">
+                <section id="overviewPanel" class="workspace-pane"></section>
+                <section id="pipelinePanel" class="workspace-pane"></section>
+                <section id="insightPanel" class="workspace-pane"></section>
+              </div>
+            </section>
+          </main>
+        </div>
       </div>
     </div>
 
