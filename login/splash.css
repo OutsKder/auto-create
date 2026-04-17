@@ -1,0 +1,199 @@
+.splash-page {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(132, 116, 255, 0.24), transparent 22%),
+    radial-gradient(circle at 82% 12%, rgba(118, 206, 255, 0.16), transparent 20%),
+    radial-gradient(circle at 50% 38%, rgba(255, 154, 210, 0.08), transparent 26%),
+    radial-gradient(circle at 50% 88%, rgba(255, 190, 154, 0.18), transparent 20%),
+    linear-gradient(180deg, #040814 0%, #08132b 14%, #10224a 30%, #18335e 44%, #2b3f67 56%, #523f6d 72%, #2e2146 86%, #120d22 100%);
+}
+
+.splash-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.splash-stage {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  display: grid;
+  place-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+
+.splash-hero-comet {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 12px;
+  animation: cometAppear 4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.splash-hero-comet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(195, 236, 255, 0.96) 24%, rgba(255, 227, 164, 0.92) 46%, rgba(169, 128, 255, 0.4) 100%);
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.72),
+    0 0 32px rgba(120, 218, 255, 0.44),
+    0 0 48px rgba(255, 203, 130, 0.32),
+    inset 0 0 24px rgba(255, 255, 255, 0.26);
+  animation: cometPulse 3.4s ease-in-out forwards;
+}
+
+.splash-hero-comet::after {
+  content: "";
+  position: absolute;
+  right: -340px;
+  top: 50%;
+  width: 480px;
+  height: 24px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(198, 171, 255, 0.24) 28%, rgba(255, 224, 177, 0.18) 52%, rgba(255, 255, 255, 0) 100%);
+  filter: blur(12px);
+  opacity: 0;
+  animation: cometTailAppear 3.4s ease-in-out forwards;
+}
+
+.splash-hero-glow {
+  position: absolute;
+  inset: 50%;
+  width: 280px;
+  height: 280px;
+  margin-left: -140px;
+  margin-top: -140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(106, 228, 255, 0.32) 0%, rgba(123, 97, 255, 0.18) 40%, transparent 70%);
+  filter: blur(32px);
+  opacity: 0;
+  animation: glowExpand 3.4s ease-out forwards;
+}
+
+.splash-title {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: clamp(36px, 8vw, 64px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow:
+    0 4px 16px rgba(6, 10, 22, 0.48),
+    0 0 24px rgba(107, 162, 255, 0.34),
+    0 0 40px rgba(143, 112, 255, 0.22);
+  opacity: 0;
+  animation: titleFadeIn 1.05s ease-out 2.1s forwards;
+}
+
+.splash-tagline {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: clamp(14px, 3vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow:
+    0 2px 8px rgba(6, 10, 22, 0.36),
+    0 0 16px rgba(89, 123, 255, 0.16);
+  opacity: 0;
+  animation: taglineFadeIn 1.05s ease-out 2.35s forwards;
+}
+
+@keyframes cometAppear {
+  from {
+    transform: scale(0.08) translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes cometPulse {
+  0% {
+    filter: blur(0px) brightness(0.8);
+  }
+  40% {
+    filter: blur(0px) brightness(1.16);
+  }
+  100% {
+    filter: blur(0px) brightness(1);
+  }
+}
+
+@keyframes cometTailAppear {
+  from {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.92;
+  }
+}
+
+@keyframes glowExpand {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.48;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0.24;
+  }
+}
+
+@keyframes titleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes taglineFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .splash-stage {
+    gap: 16px;
+  }
+
+  .splash-hero-comet {
+    width: 80px;
+    height: 80px;
+  }
+
+  .splash-hero-comet::after {
+    right: -240px;
+    width: 340px;
+    height: 18px;
+  }
+}

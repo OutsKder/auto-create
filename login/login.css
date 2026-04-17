@@ -1,0 +1,584 @@
+body.login-page {
+  overflow: hidden;
+}
+
+body.login-page.is-entering {
+  overflow: hidden;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.login-stage {
+  position: relative;
+  width: min(1080px, 100%);
+  display: grid;
+  place-items: center;
+  perspective: 1200px;
+}
+
+body.login-page.is-entering .login-stage {
+  animation: stageFadeIn 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-card {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 34px 32px 30px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * -1deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background:
+    radial-gradient(circle at calc(var(--mouse-x, 50) * 1%) calc(var(--mouse-y, 50) * 1%), rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 40%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.07) 30%, rgba(255, 255, 255, 0.03) 100%),
+    linear-gradient(180deg, rgba(8, 14, 34, 0.72) 0%, rgba(11, 20, 48, 0.68) 24%, rgba(24, 34, 78, 0.62) 54%, rgba(66, 52, 92, 0.58) 80%, rgba(149, 94, 107, 0.54) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 26px 66px rgba(6, 10, 22, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+body.login-page.is-entering .login-card {
+  animation: cardRiseFromBottom 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.login-card::before,
+.login-card::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.login-card::before {
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(135, 112, 255, 0.3), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(106, 228, 255, 0.24), transparent 28%);
+}
+
+.login-card::after {
+  inset: 1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.login-hero {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  padding-right: 124px;
+}
+
+body.login-page.is-entering .login-hero {
+  animation: heroFadeIn 0.78s ease-out 0.08s both;
+}
+
+.login-hero h1 {
+  margin: 8px 0 12px;
+  font-size: clamp(30px, 4vw, 40px);
+  line-height: 1.15;
+  color: #fff;
+  text-shadow:
+    0 3px 14px rgba(7, 10, 24, 0.38),
+    0 0 20px rgba(107, 162, 255, 0.28);
+}
+
+.login-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.8;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.moon-scene {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 106px;
+  height: 106px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.moon-aura {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(106, 228, 255, 0.4) 0%, rgba(182, 196, 255, 0.22) 46%, rgba(106, 228, 255, 0) 76%);
+  filter: blur(8px);
+  opacity: 0.88;
+  transition: opacity 0.6s ease, transform 0.6s ease, filter 0.6s ease;
+}
+
+.moon-body {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 32% 28%, #fffdf5 0%, #f1e8cb 34%, #dfd0a6 70%, #d8bf8e 100%);
+  box-shadow:
+    0 0 16px rgba(255, 245, 190, 0.52),
+    0 0 30px rgba(150, 219, 255, 0.24),
+    inset -8px -8px 18px rgba(147, 124, 83, 0.18);
+  transform: translateZ(0);
+  transition: background 0.84s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.84s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.moon-crater {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(177, 156, 116, 0.34);
+}
+
+.crater-a {
+  width: 14px;
+  height: 14px;
+  top: 14px;
+  left: 13px;
+}
+
+.crater-b {
+  width: 9px;
+  height: 9px;
+  top: 30px;
+  left: 31px;
+}
+
+.crater-c {
+  width: 8px;
+  height: 8px;
+  top: 18px;
+  left: 37px;
+}
+
+.moon-umbra {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(15, 11, 28, 0.78) 0%, rgba(7, 6, 15, 0.96) 74%);
+  transform: translateX(108%);
+  transition: transform 0.84s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-card.is-eclipse .moon-body {
+  background: radial-gradient(circle at 34% 30%, #f0ab88 0%, #d26556 28%, #7d202f 56%, #2b1121 100%);
+  box-shadow:
+    0 0 14px rgba(255, 131, 112, 0.5),
+    0 0 34px rgba(189, 39, 64, 0.45),
+    0 0 46px rgba(86, 23, 52, 0.32),
+    inset 0 0 14px rgba(15, 7, 20, 0.58);
+}
+
+.login-card.is-eclipse .moon-aura {
+  opacity: 0.72;
+  transform: scale(1.08);
+  filter: blur(9px) saturate(114%);
+}
+
+.login-card.is-eclipse .moon-umbra {
+  transform: translateX(24%);
+}
+
+.moon-scene.is-shifting {
+  animation: moonNudge 0.84s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-form {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.auth-mode-switch {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(123, 97, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.auth-mode-btn {
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(233, 240, 255, 0.9);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.auth-mode-btn:hover {
+  transform: translateY(-1px);
+}
+
+.auth-mode-btn.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(194, 238, 255, 0.24) 100%);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+body.login-page.is-entering .login-form {
+  animation: formFadeIn 0.82s ease-out 0.16s both;
+}
+
+.field-wrap {
+  display: grid;
+  gap: 6px;
+  color: rgba(236, 242, 255, 0.95);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field-wrap input {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.44);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.is-hidden {
+  display: none;
+}
+
+.code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.send-code-btn {
+  min-height: 44px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.send-code-btn:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.field-wrap.is-focused span,
+.field-wrap.is-filled span {
+  color: #ffffff;
+}
+
+.password-row {
+  position: relative;
+}
+
+.password-row input {
+  padding-right: 78px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(123, 97, 255, 0.24);
+  background: rgba(123, 97, 255, 0.1);
+  color: #3720c2;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle:hover {
+  transform: translateY(-50%) scale(1.03);
+}
+
+.password-toggle.is-on {
+  background: rgba(106, 228, 255, 0.18);
+  color: #0d4f87;
+}
+
+.form-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.remember-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(235, 241, 255, 0.96);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.remember-wrap input {
+  width: auto;
+}
+
+.caps-tip,
+.login-feedback {
+  min-height: 22px;
+  padding: 2px 2px;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.caps-tip.visible {
+  color: #ffd88a;
+}
+
+.login-feedback.is-error {
+  color: #ffd0d0;
+}
+
+.login-feedback.is-success {
+  color: #b9ffd8;
+}
+
+.login-submit {
+  position: relative;
+  overflow: hidden;
+  min-height: 46px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.login-submit.is-loading {
+  opacity: 0.9;
+}
+
+.login-hint {
+  margin: 4px 0 0;
+  color: rgba(227, 236, 255, 0.88);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.login-orbits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.orbit-1 {
+  width: 320px;
+  height: 320px;
+  right: -140px;
+  top: -130px;
+  animation: slowSpin 16s linear infinite;
+}
+
+.orbit-2 {
+  width: 240px;
+  height: 240px;
+  left: -120px;
+  bottom: -100px;
+  animation: slowSpinReverse 20s linear infinite;
+}
+
+.orbit-3 {
+  width: 160px;
+  height: 160px;
+  right: 20px;
+  bottom: 34px;
+  border-style: dashed;
+  border-color: rgba(106, 228, 255, 0.24);
+  animation: slowSpin 26s linear infinite;
+}
+
+.ripple-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(106, 228, 255, 0.3) 50%, rgba(106, 228, 255, 0) 100%);
+  transform: translate(-50%, -50%);
+  animation: ripplePulse 0.54s ease-out forwards;
+}
+
+.corner-star {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 0 6px rgba(255, 246, 198, 0.78)) drop-shadow(0 0 14px rgba(255, 241, 174, 0.48));
+  animation: cornerStarBurst 0.74s ease-out forwards;
+}
+
+.corner-star::before,
+.corner-star::after {
+  content: "";
+  position: absolute;
+  background: radial-gradient(circle at 50% 46%, rgba(255, 255, 246, 0.98) 0%, rgba(255, 248, 214, 0.95) 38%, rgba(255, 241, 170, 0.82) 62%, rgba(255, 241, 170, 0) 100%);
+  clip-path: polygon(50% 0%, 60% 28%, 100% 50%, 60% 72%, 50% 100%, 40% 72%, 0% 50%, 40% 28%);
+}
+
+.corner-star::before {
+  width: 46px;
+  height: 46px;
+  left: 5px;
+  top: 0;
+}
+
+.corner-star::after {
+  width: 22px;
+  height: 22px;
+  right: 0;
+  bottom: 3px;
+  opacity: 0.96;
+}
+
+@keyframes ripplePulse {
+  from {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.8);
+  }
+}
+
+@keyframes cornerStarBurst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.24);
+  }
+  36% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+}
+
+@keyframes stageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardRiseFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(120px) scale(0.94);
+    filter: blur(8px);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.01);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes formFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes moonNudge {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  42% {
+    transform: translate3d(-2px, -3px, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  body.login-page {
+    overflow-y: auto;
+  }
+
+  .login-shell {
+    place-items: start center;
+    padding: 16px 12px 24px;
+  }
+
+  .login-card {
+    padding: 22px 16px 20px;
+  }
+
+  .moon-scene {
+    top: 10px;
+    right: 10px;
+    width: 84px;
+    height: 84px;
+  }
+
+  .moon-body {
+    top: 18px;
+    right: 18px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .login-hero {
+    padding-right: 92px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

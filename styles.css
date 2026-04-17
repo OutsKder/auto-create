@@ -494,6 +494,13 @@ textarea {
   justify-content: flex-end;
 }
 
+.session-inline-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
 .hero-tags {
   display: flex;
   flex-wrap: wrap;

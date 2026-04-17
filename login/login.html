@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>织界引擎 | 登录</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./login.css" />
+  </head>
+  <body class="login-page">
+    <div class="app-shell login-shell">
+      <div class="meteor-field" aria-hidden="true">
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+        <span class="meteor"></span>
+      </div>
+
+      <main class="login-stage" id="loginStage">
+        <section class="login-card panel" id="loginCard" aria-label="织界引擎登录区">
+          <div class="moon-scene" id="moonScene" aria-hidden="true">
+            <span class="moon-aura"></span>
+            <span class="moon-body">
+              <span class="moon-crater crater-a"></span>
+              <span class="moon-crater crater-b"></span>
+              <span class="moon-crater crater-c"></span>
+              <span class="moon-umbra"></span>
+            </span>
+          </div>
+
+          <div class="login-hero">
+            <p class="eyebrow">ZHIJIE ENGINE LOGIN</p>
+            <h1>进入织界引擎</h1>
+            <p class="login-subtitle">
+              从灵感到交付，所有节点会在这里被编织成可追踪、可推进、可回看的流程。
+            </p>
+          </div>
+
+          <div id="authModeSwitch" class="auth-mode-switch" role="tablist" aria-label="登录或注册">
+            <button type="button" class="auth-mode-btn active" data-mode="login" role="tab" aria-selected="true">登录</button>
+            <button type="button" class="auth-mode-btn" data-mode="register" role="tab" aria-selected="false">注册</button>
+          </div>
+
+          <form id="loginForm" class="login-form" novalidate>
+            <label class="field-wrap" data-field-wrap>
+              <span>邮箱</span>
+              <input id="emailInput" name="email" type="email" placeholder="name@company.com" autocomplete="email" required />
+            </label>
+
+            <label class="field-wrap" data-field-wrap>
+              <span>密码</span>
+              <div class="password-row">
+                <input
+                  id="passwordInput"
+                  name="password"
+                  type="password"
+                  placeholder="至少 6 位字符"
+                  autocomplete="current-password"
+                  minlength="6"
+                  required
+                />
+                <button id="togglePasswordBtn" type="button" class="password-toggle" aria-label="显示密码" aria-pressed="false">
+                  显示
+                </button>
+              </div>
+            </label>
+
+            <label id="codeFieldWrap" class="field-wrap code-field is-hidden" data-field-wrap>
+              <span>邮箱验证码</span>
+              <div class="code-row">
+                <input
+                  id="codeInput"
+                  name="code"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder="输入 6 位验证码"
+                  autocomplete="one-time-code"
+                />
+                <button id="sendCodeBtn" type="button" class="ghost-btn send-code-btn">发送验证码</button>
+              </div>
+            </label>
+
+            <div class="form-row">
+              <label class="remember-wrap">
+                <input id="rememberInput" name="remember" type="checkbox" />
+                <span>记住我（7 天）</span>
+              </label>
+              <button type="button" id="quickFillBtn" class="ghost-btn">一键填充演示账号</button>
+            </div>
+
+            <div id="capsTip" class="caps-tip" aria-live="polite"></div>
+            <div id="loginFeedback" class="login-feedback" aria-live="polite"></div>
+
+            <button id="loginSubmitBtn" type="submit" class="primary-btn login-submit">
+              登录并进入工作台
+            </button>
+
+            <p class="login-hint">交互提示：支持回车提交、密码可视切换、鼠标跟随光效与点击涟漪。</p>
+          </form>
+
+          <div class="login-orbits" aria-hidden="true">
+            <span class="orbit orbit-1"></span>
+            <span class="orbit orbit-2"></span>
+            <span class="orbit orbit-3"></span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./auth.js"></script>
+    <script src="./login.js"></script>
+  </body>
+</html>

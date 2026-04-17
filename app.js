@@ -13,6 +13,10 @@ if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
   });
 }
 
+if (window.AuthSession) {
+  window.AuthSession.requireAuth("./login/splash.html");
+}
+
 const STAGE_DEFS = [
   { id: "intake", name: "需求录入", requiresReview: false },
   { id: "analysis", name: "需求分析", requiresReview: false },
@@ -59,10 +63,13 @@ const searchInput = document.getElementById("searchInput");
 const statusFilter = document.getElementById("statusFilter");
 const seedDataBtn = document.getElementById("seedDataBtn");
 const clearDataBtn = document.getElementById("clearDataBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const userWelcome = document.getElementById("userWelcome");
 let activeWorkspaceTab = "overview";
 let activePipelineStageId = null;
 
 bindEvents();
+hydrateAuthBanner();
 render();
 
 function bindEvents() {
@@ -76,6 +83,27 @@ function bindEvents() {
   overviewPanel.addEventListener("click", handleOverviewAction);
   seedDataBtn.addEventListener("click", restoreSeedData);
   clearDataBtn.addEventListener("click", clearLocalData);
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", handleLogout);
+  }
+}
+
+function hydrateAuthBanner() {
+  if (!userWelcome || !window.AuthSession) {
+    return;
+  }
+
+  const session = window.AuthSession.readSession();
+  const displayName = window.AuthSession.getDisplayName(session);
+  userWelcome.textContent = `你好，${displayName}`;
+}
+
+function handleLogout() {
+  if (window.AuthSession) {
+    window.AuthSession.clearSession();
+  }
+
+  window.location.replace("./login/login.html");
 }
 
 async function handleRequirementSubmit(event) {
