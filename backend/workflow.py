@@ -52,19 +52,6 @@ class ReliableAgentWorkflow:
             return
             
         # 2. 如果没有黄金预设剧本，尝试直接走真正的 LLM 接口
-        has_api_key = os.getenv("OPENAI_API_KEY") not in [None, "your-api-key-here", ""]
-        if not has_api_key:
-            # 环境中没有密钥时，防止前端崩溃，走通用 mock
-            yield f"data: {json.dumps({'status': 'running', 'text': '⚠️ (未检测到真实 API_KEY，启用智能体模拟生成模式)\\n\\n'})}\n\n"
-            content = f"### [{stage_id.capitalize()} Agent]\n\n正在分析定制化需求：**{req_data.get('title','')}**\n\n- 这是因为您没有配置 `OPENAI_API_KEY` 而触发的全自动兜底回退。\n- 如果在 `.env` 文件中配置了密钥，系统将会发起真实的 API 请求并流式返回这里！\n\n> 💡 *当前阶段节点执行模拟完毕*"
-            for char in content:
-                yield f"data: {json.dumps({'status': 'running', 'text': char})}\n\n"
-                await asyncio.sleep(0.02)
-            
-            final_status = "waiting_review" if stage_id in ["solution", "review"] else "completed"
-            yield f"data: {json.dumps({'status': final_status, 'text': '\\n'})}\n\n"
-            return
-
         # ============= 真实大模型流式调用环节 ============= 
         try:
             generator = stream_llm_response(stage_id, req_data)

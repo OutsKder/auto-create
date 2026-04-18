@@ -1,17 +1,15 @@
 import os
 import json
-from openai import AsyncOpenAI
-from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
-load_dotenv()
-
-# 使用标准的 OpenAI 客户端，这里可以配置为 DeepSeek/Ali/OpenAI
-# 我们默认采用兼容的配置方案
-client = AsyncOpenAI(
-    api_key=os.getenv("OPENAI_API_KEY", "your-api-key-here"),
-    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+# 初始化给定的 Qwen 语言模型后端
+llm_model = ChatOpenAI(
+    model="Qwen2.5-Coder-32B-Instruct-GPTQ-Int4/",
+    base_url="http://47.123.4.240:11499/v1/",
+    api_key="key",  # 根据要求直接硬编码
+    streaming=True
 )
-MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
 
 async def get_stage_prompt(stage_id: str, req_data: dict) -> str:
     """生成每个节点的专属 Prompt"""
@@ -37,16 +35,14 @@ async def stream_llm_response(stage_id: str, req_data: dict):
     """
     prompt = await get_stage_prompt(stage_id, req_data)
     
-    # 真实的大模型流式请求
-    response = await client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "你是【织界引擎】系统的 AI 智能体节点，在你的环节产出严谨、高质量的专业内容。不要废话，直接输出结果。"},
-            {"role": "user", "content": prompt}
-        ],
-        stream=True,
-    )
+    messages = [
+        SystemMessage(content="你是【织界引擎】系统的 AI 智能体节点，在你的环节产出严谨、高质量的专业内容。不要废话，直接输出结果。"),
+        HumanMessage(content=prompt)
+    ]
     
-    async for chunk in response:
+    # 使用 Langchain 的 astream 真实发往 Qwen 模型
+    async for chunk in llm_model.astream(messages):
+        if chunk.content:
+            yield chunk.content
         if chunk.choices and chunk.choices[0].delta.content:
             yield chunk.choices[0].delta.content
