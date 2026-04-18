@@ -104,7 +104,15 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 }}
 ```
 
-**每次只需返回一个 JSON，我会把执行结果返回给你。如果遇到报错，仔细分析错误日志，再次触发 write_file_tool 修改文件。最后用 `finish` 结束任务。**
+**每次只需返回一个 JSON，我会把执行结果返回给你。如果遇到报错，仔细分析错误日志，再次触发 write_file_tool 修改文件。**
+
+**最后交付任务 (finish)：**
+当确认代码开发完毕并在沙箱中成功运行后，你必须调用 `finish` 动作，并在 `message` 字段中根据你的执行过程输出一份《编码实现执行总结报告》（Markdown格式）。报告应详细包含：
+1. 编码实现是否全部完成及总结
+2. 主要实现的功能清单与边界处理
+3. 实际生成并落盘的文件列表 (File Tree)
+4. 沙箱执行与自测的情况概述
+※ 注意：由于嵌套在 JSON 的 `message` 中，请确保换行使用标准的 `\\n` 转义。
 """
     
     messages = [
