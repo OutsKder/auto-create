@@ -56,7 +56,26 @@ class ReliableAgentWorkflow:
         try:
             if stage_id == "coding":
                 from coder_agent import stream_coder_agent
-                generator = stream_coder_agent(req_id, req_data, "已分析的架构...")
+                
+                # 尝试读取上一步（方案设计方案）作为上下文提供给 Coder
+                arch_context = "暂无系统架构文档"
+                arch_path = os.path.join("outputs", f"{req_id}_solution.md")
+                if os.path.exists(arch_path):
+                    with open(arch_path, "r", encoding="utf-8") as f:
+                        arch_context = f.read()
+                        
+                generator = stream_coder_agent(req_id, req_data, arch_context)
+            elif stage_id == "testing":
+                from test_agent import stream_test_agent
+                
+                # 读取代码结构作为上下文
+                arch_context = "暂无代码文档"
+                arch_path = os.path.join("outputs", f"{req_id}_solution.md")
+                if os.path.exists(arch_path):
+                    with open(arch_path, "r", encoding="utf-8") as f:
+                        arch_context = f.read()
+                
+                generator = stream_test_agent(req_id, req_data, arch_context)
             else:
                 from llm import stream_llm_response
                 generator = stream_llm_response(stage_id, req_data)
