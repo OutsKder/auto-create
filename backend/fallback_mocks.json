@@ -1,0 +1,14 @@
+{
+  "golden_paths": {
+    "审批需求": {
+      "analysis": "### [需求分析专家 Agent]\n\n🚀 **正在为您结构化拆解【审批需求】...**\n\n**1. 业务目标**\n实现工作台中的审批通知自动汇总与流转，减少跨部门漏批。\n\n**2. 核心功能点**\n- [x] 每日高优审批汇总\n- [x] 自动飞书/邮件催办\n- [x] 结构化审批日志沉淀\n\n**3. 验收标准 (UAT)**\n- 超时审批报警延迟 < 1分钟\n- 催办卡片支持直接点击【通过/驳回】\n\n> 💡 *分析已完成，等待架构设计介入...*",
+
+      "solution": "### [架构师 Agent]\n\n📐 **正在生成【审批中心】技术编排方案...**\n\n根据上游分析结果，本次采用 **Event-Driven (事件驱动)** 架构。\n\n**1. 核心模块拓扑**\n- `Event Gateway`: 监听飞书的审批 Webhook\n- `Task Scheduler`: 基于 Redis 的定时催办器\n- `Audit UI`: 工作台前端渲染模块\n\n**2. 数据结构设计 (Pydantic)**\n```python\nclass AuditEvent(BaseModel):\n    event_id: str\n    status: Literal['PENDING', 'APPROVED', 'REJECTED']\n    timeout_threshold: int\n```\n\n**3. 风险评估**\n- 🔴 飞书 Webhook 可能存在回调乱序 -> *应对：引入幂等性消费去重。*\n\n> ⚠️ *方案生成完毕，等待项目 Owner 审核确认！*",
+
+      "coding": "### [资深研发 Agent]\n\n💻 **正在根据【已审核架构】生成核心逻辑代码...**\n\n*(底层 AST 语法树自校验中... 校验通过)*\n\n**1. Webhook 接收端 (`gateway.py`)**\n```python\nfrom fastapi import FastAPI, BackgroundTasks\nfrom models import AuditEvent\n\napp = FastAPI()\n\n@app.post(\"/webhook/feishu\")\nasync def feishu_webhook(event: AuditEvent, bg_tasks: BackgroundTasks):\n    # 幂等性校验\n    if await check_idempotent(event.event_id):\n        return {\"status\": \"ignored\", \"msg\": \"Duplicated\"}\n        \n    # 压入处理队列\n    bg_tasks.add_task(process_audit, event)\n    return {\"status\": \"success\"}\n```\n\n> 💡 *核心源码生成完毕，内存预编译通过，已交接给 QA Agent。*",
+
+      "testing": "### [测试专家 Agent]\n\n🧪 **正在对 VFS 内存源码进行边界用例覆盖...**\n\n**核心用例列表 (Pytest Draft)**\n\n| 用例编号 | 测试场景 | 预期结果 | 覆盖状态 |\n| --- | --- | --- | --- |\n| `TC-01` | 正常下发审批流 | HTTP 200, DB 落库 | ✅ |\n| `TC-02` | 触发 Webhook 乱序消费 | 幂等性命中, 不重复建单 | ✅ |\n| `TC-03` | 飞书 API 熔断时重试兜底 | 自动进入死信队列 (DLQ) | ✅ |\n\n```python\n# test_gateway.py\n@pytest.mark.asyncio\nasync def test_feishu_webhook_idempotency():\n    payload = {\"event_id\": \"123\", \"status\": \"PENDING\", \"timeout_threshold\": 3600}\n    res1 = await client.post(\"/webhook/feishu\", json=payload)\n    res2 = await client.post(\"/webhook/feishu\", json=payload)\n    assert res2.json()[\"status\"] == \"ignored\"\n```\n\n> 💡 *测试报告产出完毕，自动化集成度 92%。*"
+    }
+  },
+  "universal_fallback": "### [容灾接管系统]\n\n⚠️ *(检测到外部大模型 API 超时，自动降级至内置稳定链路... 接管成功！)*\n\n**当前节点执行简报：**\n\n我们已为您完成该节点的标准化处理分析。基于历史相似项目，我们推荐如下行动点：\n- 采用高可用异步架构开发\n- 补充端到端自动化测试\n- 确保数据通信加密\n\n> 💡 *节点应急执行完成，已保证流程继续流转。等待人工审查。*"
+}

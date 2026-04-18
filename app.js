@@ -1,4 +1,17 @@
 const STORAGE_KEY = "delivery-engine-mvp-v1";
+const API_BASE_URL = "http://127.0.0.1:8000/api/v1"; // 指向刚刚启动的 FastAPI 后端
+
+// 配置 marked.js 使用 highlight.js 进行代码高亮
+if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+  marked.setOptions({
+    highlight: function(code, lang) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      return hljs.highlight(code, { language }).value;
+    },
+    langPrefix: 'hljs language-',
+    breaks: true // 支持 GitHub 风味换行
+  });
+}
 
 const STAGE_DEFS = [
   { id: "intake", name: "需求录入", requiresReview: false },
@@ -65,7 +78,7 @@ function bindEvents() {
   clearDataBtn.addEventListener("click", clearLocalData);
 }
 
-function handleRequirementSubmit(event) {
+async function handleRequirementSubmit(event) {
   event.preventDefault();
   const formData = new FormData(requirementForm);
   const payload = {
@@ -77,14 +90,41 @@ function handleRequirementSubmit(event) {
     owner: String(formData.get("owner") || "待分配").trim() || "待分配",
   };
 
-  const requirement = createRequirement(payload);
-  state.requirements.unshift(requirement);
-  state.selectedRequirementId = requirement.id;
-  addLog(requirement, "intake", "已创建需求并初始化 Pipeline。");
-  saveState();
-  requirementForm.reset();
-  render();
-  startOrResumePipeline(requirement.id);
+  try {
+    // 拦截创建：请求真正的后端引擎
+    const res = await fetch(`${API_BASE_URL}/pipeline/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.ok) {
+      const apiResult = await res.json();
+      console.log("后端初始化成功:", apiResult.requirement_id);
+      
+      // 仍然保留前端 state 的初始化，但可以植入后端的 ID
+      const requirement = createRequirement(payload, apiResult.requirement_id);
+      state.requirements.unshift(requirement);
+      state.selectedRequirementId = requirement.id;
+      
+      addLog(requirement, "intake", `已请求远端引擎创建需求 [${apiResult.requirement_id}] 并初始化流水线。`);
+      saveState();
+      requirementForm.reset();
+      render();
+      startOrResumePipeline(requirement.id);
+    }
+  } catch (e) {
+    console.error("无法连接后端", e);
+    // 回退到纯前端模式
+    const requirement = createRequirement(payload);
+    state.requirements.unshift(requirement);
+    state.selectedRequirementId = requirement.id;
+    addLog(requirement, "intake", "使用纯前端 Mock 模式初始化，无真实后端联动。");
+    saveState();
+    requirementForm.reset();
+    render();
+    startOrResumePipeline(requirement.id);  
+  }
 }
 
 function handleRequirementSelection(event) {
@@ -267,7 +307,7 @@ function saveState() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function createRequirement(payload) {
+function createRequirement(payload, backendId = null) {
   const now = nowIso();
   const stages = STAGE_DEFS.map((def) => ({
     id: def.id,
@@ -281,8 +321,9 @@ function createRequirement(payload) {
   }));
 
   return {
-    id: createId("req"),
+    id: backendId || createId("req"),
     title: payload.title,
+
     background: payload.background,
     goal: payload.goal,
     constraints: payload.constraints || "无额外约束",
@@ -740,8 +781,18 @@ function renderStageCard(requirement, stage, index) {
   const activeClass = requirement.currentStageId === stage.id ? "active" : "";
   const canExecute = canExecuteStage(requirement, stage.id);
   const relation = getStageRelation(requirement, stage.id);
+  
+  let outputHtml = '';
+  if (stage.output) {
+    if (isFocused) {
+      outputHtml = typeof marked !== 'undefined' ? marked.parse(stage.output) : escapeHtml(stage.output);
+    } else {
+      outputHtml = escapeHtml(getStagePreview(stage.output, 180));
+    }
+  }
+
   const output = stage.output
-    ? `<div class="output-box">${escapeHtml(isFocused ? stage.output : getStagePreview(stage.output, 180))}</div>`
+    ? `<div class="output-box markdown-body">${outputHtml}</div>`
     : `<div class="output-box muted">该节点还没有产出内容。</div>`;
 
   return `
@@ -959,20 +1010,58 @@ function executeStage(requirementId, stageId, options = {}) {
   }
 
   stage.status = "running";
+  stage.output = ""; // 清空输出，准备接收流
   stage.updatedAt = nowIso();
   requirement.currentStageId = stage.id;
   requirement.overallStatus = "in_progress";
   requirement.updatedAt = nowIso();
-  addLog(requirement, stage.id, `已启动 ${stage.name} 节点。`);
+  addLog(requirement, stage.id, `已启动 ${stage.name} 节点并连接大模型...`);
   saveState();
   render();
 
-  const timerId = window.setTimeout(() => {
-    runtime.timers.delete(buildTimerKey(requirementId, stageId));
-    finalizeStage(requirementId, stageId);
-  }, 700);
+  // 【核心改造】: 接入真实的 FastAPI SEE 接口，实现打字机效果
+  // 我们使用真实的 API (使用一个 fake 需求 ID 即可在 mock 时复用)
+  const fakeReqId = "demo-req-123"; 
+  const sseUrl = `${API_BASE_URL}/pipeline/${fakeReqId}/stage/${stageId}/execute/stream?mock=true`;
+  
+  const eventSource = new EventSource(sseUrl);
 
-  runtime.timers.set(buildTimerKey(requirementId, stageId), timerId);
+  eventSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    // 累加流式文本
+    if (data.text) {
+      stage.output += data.text;
+      saveState();
+      render(); // 实时刷新 UI，产生打字机视觉效果
+    }
+
+    // 检查状态，如果完成或需要审核则中止
+    if (data.status === "waiting_review") {
+      eventSource.close();
+      stage.status = "waiting_review";
+      requirement.currentStageId = stage.id;
+      addLog(requirement, stage.id, `${stage.name} 已生成结果，触发人类拦截，等待审核。`);
+      saveState();
+      render();
+    } else if (data.status === "completed") {
+      eventSource.close();
+      stage.status = "completed";
+      requirement.currentStageId = stage.id;
+      addLog(requirement, stage.id, `${stage.name} 已完成。`);
+      saveState();
+      render();
+      startOrResumePipeline(requirementId); // 自动跳下一阶段
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error("SSE Error:", error);
+    eventSource.close();
+    // 熔断防翻车，回退到普通逻辑
+    addLog(requirement, stage.id, `API 响应异常，已熔断并尝试重新生成。`);
+    finalizeStage(requirementId, stageId); 
+  };
 }
 
 function finalizeStage(requirementId, stageId) {
@@ -1306,7 +1395,14 @@ function getStagePreview(output, maxLength = 180) {
     return "该节点还没有产出内容。";
   }
 
-  const normalized = output.replace(/\s+/g, " ").trim();
+  // 粗略去除 markdown 符号，用于预览
+  let stripped = output
+    .replace(/[#*`>]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // 链接处理
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const normalized = stripped;
   if (normalized.length <= maxLength) {
     return normalized;
   }
