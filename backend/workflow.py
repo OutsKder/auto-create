@@ -54,7 +54,12 @@ class ReliableAgentWorkflow:
         # 2. 如果没有黄金预设剧本，尝试直接走真正的 LLM 接口
         # ============= 真实大模型流式调用环节 ============= 
         try:
-            generator = stream_llm_response(stage_id, req_data)
+            if stage_id == "coding":
+                from coder_agent import stream_coder_agent
+                generator = stream_coder_agent(req_id, req_data, "已分析的架构...")
+            else:
+                from llm import stream_llm_response
+                generator = stream_llm_response(stage_id, req_data)
             
             # 建立用于自动写 MD 文件的文件夹
             os.makedirs("outputs", exist_ok=True)
