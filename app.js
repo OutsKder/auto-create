@@ -65,6 +65,14 @@ const seedDataBtn = document.getElementById("seedDataBtn");
 const clearDataBtn = document.getElementById("clearDataBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const userWelcome = document.getElementById("userWelcome");
+
+// 方案大文档 Modal
+const documentViewerModal = document.getElementById("documentViewerModal");
+const closeDocumentViewerBtn = document.getElementById("closeDocumentViewerBtn");
+const documentViewerTitle = document.getElementById("documentViewerTitle");
+const documentViewerStatus = document.getElementById("documentViewerStatus");
+const documentViewerContent = document.getElementById("documentViewerContent");
+
 let activeWorkspaceTab = "overview";
 let activePipelineStageId = null;
 
@@ -85,6 +93,18 @@ function bindEvents() {
   clearDataBtn.addEventListener("click", clearLocalData);
   if (logoutBtn) {
     logoutBtn.addEventListener("click", handleLogout);
+  }
+
+  // 绑定专属大页的关闭操作
+  if (closeDocumentViewerBtn) {
+    closeDocumentViewerBtn.addEventListener("click", closeDocumentViewer);
+  }
+  if (documentViewerModal) {
+    documentViewerModal.addEventListener("click", (e) => {
+      if (e.target === documentViewerModal) {
+        closeDocumentViewer();
+      }
+    });
   }
 }
 
@@ -242,6 +262,11 @@ function handlePipelineAction(event) {
     return;
   }
 
+  if (action === "view-document") {
+    openDocumentViewer(requirement.id, stageId);
+    return;
+  }
+
   if (action === "focus-stage") {
     activePipelineStageId = stageId;
     renderSelectedRequirement();
@@ -267,6 +292,31 @@ function handlePipelineAction(event) {
     const noteField = pipelinePanel.querySelector(`[data-note-stage-id="${stageId}"]`);
     saveStageNote(requirement.id, stageId, noteField ? noteField.value.trim() : "");
   }
+}
+
+function openDocumentViewer(requirementId, stageId) {
+  const requirement = getRequirementById(requirementId);
+  if (!requirement || !documentViewerModal) return;
+  const stage = getStage(requirement, stageId);
+  if (!stage) return;
+
+  documentViewerTitle.textContent = `${stage.name} - 方案详情文档`;
+  documentViewerStatus.textContent = STATUS_LABELS[stage.status] || stage.status;
+  documentViewerStatus.className = `status-badge status-${stage.status}`;
+
+  const html = stage.output
+    ? (typeof marked !== 'undefined' ? marked.parse(stage.output) : escapeHtml(stage.output))
+    : "<p class='muted'>文档暂无产出内容。</p>";
+  
+  documentViewerContent.innerHTML = html;
+  documentViewerModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden"; // 防双层滚动
+}
+
+function closeDocumentViewer() {
+  if (!documentViewerModal) return;
+  documentViewerModal.classList.add("hidden");
+  document.body.style.overflow = "";
 }
 
 function restoreSeedData() {
@@ -849,8 +899,8 @@ function renderStageCard(requirement, stage, index) {
         </div>
 
         <div class="stage-actions">
-          <button class="ghost-btn" data-action="focus-stage" data-stage-id="${stage.id}">
-            ${isFocused ? "已聚焦" : "聚焦此阶段"}
+          <button class="ghost-btn" data-action="view-document" data-stage-id="${stage.id}">
+            查看详细方案
           </button>
           ${renderStageActions(stage, canExecute, true)}
         </div>
@@ -1060,6 +1110,13 @@ function executeStage(requirementId, stageId, options = {}) {
       stage.output += data.text;
       saveState();
       render(); // 实时刷新 UI，产生打字机视觉效果
+
+      // 如果当前弹窗开启的是这个阶段，同步刷新大文档
+      if (documentViewerModal && !documentViewerModal.classList.contains("hidden")) {
+         if (documentViewerTitle.textContent.includes(stage.name)) {
+            documentViewerContent.innerHTML = typeof marked !== 'undefined' ? marked.parse(stage.output) : escapeHtml(stage.output);
+         }
+      }
     }
 
     // 检查状态，如果完成或需要审核则中止
