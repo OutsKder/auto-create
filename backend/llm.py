@@ -1,9 +1,11 @@
 import os
 import json
+from pathlib import Path
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
-load_dotenv()
+BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
 
 # 使用标准的 OpenAI 客户端，这里可以配置为 DeepSeek/Ali/OpenAI
 # 我们默认采用兼容的配置方案

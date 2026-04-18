@@ -124,7 +124,7 @@
       };
 
       window.ZHIJIE_BACKEND_CONFIG = window.ZHIJIE_BACKEND_CONFIG || {
-        baseUrl: "http://127.0.0.1:8000",
+        baseUrl: window.location.protocol.indexOf("http") === 0 ? window.location.origin : "http://127.0.0.1:8000",
       };
     </script>
     <script src="./supabase.js"></script>

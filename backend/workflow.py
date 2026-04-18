@@ -23,8 +23,6 @@ class ReliableAgentWorkflow:
         核心编排与流式发生器：包裹了多级容错与熔断机制。
         支持从真实的 LLM 接入并拉取数据，同时具备完美的回退能力。
         """
-        from llm import stream_llm_response
-        
         # 1. 尝试匹配黄金剧本 (The Golden Path)
         golden_scenarios = self._determine_golden_path(req_data.get("title", ""))
         
@@ -61,6 +59,22 @@ class ReliableAgentWorkflow:
                 yield f"data: {json.dumps({'status': 'running', 'text': char})}\n\n"
                 await asyncio.sleep(0.02)
             
+            final_status = "waiting_review" if stage_id in ["solution", "review"] else "completed"
+            yield f"data: {json.dumps({'status': final_status, 'text': '\\n'})}\n\n"
+            return
+
+        try:
+            try:
+                from .llm import stream_llm_response
+            except ImportError:
+                from llm import stream_llm_response
+        except Exception as import_error:
+            yield f"data: {json.dumps({'status': 'running', 'text': f'\\n\\n⚠️ LLM 依赖加载失败：{str(import_error)}，已切换到回退模式。\\n\\n'})}\n\n"
+            fallback_content = self.mocks.get("universal_fallback", "系统兜底方案已接管流程。")
+            for char in fallback_content:
+                yield f"data: {json.dumps({'status': 'running', 'text': char})}\n\n"
+                await asyncio.sleep(0.02)
+
             final_status = "waiting_review" if stage_id in ["solution", "review"] else "completed"
             yield f"data: {json.dumps({'status': final_status, 'text': '\\n'})}\n\n"
             return

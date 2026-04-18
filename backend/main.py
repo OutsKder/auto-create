@@ -7,15 +7,24 @@ import smtplib
 import uuid
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from pathlib import Path
 from typing import Dict
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
-from workflow import ReliableAgentWorkflow
+from dotenv import load_dotenv
+try:
+    from .workflow import ReliableAgentWorkflow
+except ImportError:
+    from workflow import ReliableAgentWorkflow
 
 app = FastAPI()
+BACKEND_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BACKEND_DIR.parent
+load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,7 +101,7 @@ def send_verification_email(target_email: str, code: str) -> None:
 
 
 # 引入我们刚才写的智能体工作流（抗灾备级）
-agent_workflow = ReliableAgentWorkflow("fallback_mocks.json")
+agent_workflow = ReliableAgentWorkflow(str(BACKEND_DIR / "fallback_mocks.json"))
 
 
 class RequirementCreate(BaseModel):
@@ -323,3 +332,11 @@ async def login_user(payload: LoginRequest):
             "display_name": user.get("display_name", "协作者"),
         },
     }
+
+
+@app.get("/")
+async def root_to_login():
+    return RedirectResponse(url="/login/splash.html", status_code=307)
+
+
+app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
