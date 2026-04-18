@@ -8,7 +8,8 @@ llm_model = ChatOpenAI(
     model="Qwen2.5-Coder-32B-Instruct-GPTQ-Int4/",
     base_url="http://47.123.4.240:11499/v1/",
     api_key="key",  # 根据要求直接硬编码
-    streaming=True
+    streaming=True,
+    max_tokens=2048
 )
 
 async def get_stage_prompt(stage_id: str, req_data: dict) -> str:

@@ -13,7 +13,7 @@ class ReliableAgentWorkflow:
 
     def _determine_golden_path(self, title: str):
         # 简单匹配：如果需求标题包含"审批"，则走预设的完美剧本
-        for keyword, paths in self.mocks.get("golden_paths", {}).items():
+        for keyword, paths in {}.items(): # Disabled bypass
             if keyword in title:
                 return paths
         return None
