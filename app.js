@@ -19,10 +19,10 @@ if (window.AuthSession) {
 
 const STAGE_DEFS = [
   { id: "intake", name: "需求录入", requiresReview: false },
-  { id: "analysis", name: "需求分析", requiresReview: false },
+  { id: "analysis", name: "需求分析", requiresReview: true },
   { id: "solution", name: "方案设计", requiresReview: true },
-  { id: "coding", name: "编码实现", requiresReview: false },
-  { id: "testing", name: "测试验证", requiresReview: false },
+  { id: "coding", name: "编码实现", requiresReview: true },
+  { id: "testing", name: "测试验证", requiresReview: true },
   { id: "review", name: "评审确认", requiresReview: true },
   { id: "delivery", name: "交付归档", requiresReview: false },
 ];
@@ -163,15 +163,16 @@ async function handleRequirementSubmit(event) {
     }
   } catch (e) {
     console.error("无法连接后端", e);
-    // 回退到纯前端模式
+    // 阻断假数据生成，标记异常让用户自行重试
     const requirement = createRequirement(payload);
+    requirement.overallStatus = "blocked";
+    
     state.requirements.unshift(requirement);
     state.selectedRequirementId = requirement.id;
-    addLog(requirement, "intake", "使用纯前端 Mock 模式初始化，无真实后端联动。");
+    addLog(requirement, "intake", "无法连接后端，已停止推演。请启动并检查 FastAPI 服务。");
     saveState();
     requirementForm.reset();
     render();
-    startOrResumePipeline(requirement.id);  
   }
 }
 
@@ -1097,11 +1098,16 @@ function executeStage(requirementId, stageId, options = {}) {
   saveState();
   render();
 
-  // 【核心改造】: 接入真实的 FastAPI SEE 接口，实现打字机效果
-  const sseUrl = `${API_BASE_URL}/pipeline/${requirementId}/stage/${stageId}/execute/stream?mock_error=false`;
-  
+  // 【核心改造】: 接入真实的 FastAPI SEE 接口，实现打字机效果。携带参数避免后端重启后内存库假死
+  const queryParams = new URLSearchParams({
+    mock_error: "false",
+    title: requirement.title || "",
+    background: requirement.background || "",
+    goal: requirement.goal || "",
+    constraints: requirement.constraints || ""
+  }).toString();
+  const sseUrl = `${API_BASE_URL}/pipeline/${requirementId}/stage/${stageId}/execute/stream?${queryParams}`;
   const eventSource = new EventSource(sseUrl);
-
   eventSource.onmessage = (event) => {
     const data = JSON.parse(event.data);
     
@@ -1120,7 +1126,15 @@ function executeStage(requirementId, stageId, options = {}) {
     }
 
     // 检查状态，如果完成或需要审核则中止
-    if (data.status === "waiting_review") {
+    if (data.status === "rejected") {
+      eventSource.close();
+      stage.status = "rejected";
+      requirement.currentStageId = stage.id;
+      requirement.overallStatus = "blocked";
+      addLog(requirement, stage.id, `${stage.name} 运行异常停机，需要人工确认或重试。`);
+      saveState();
+      render();
+    } else if (data.status === "waiting_review") {
       eventSource.close();
       stage.status = "waiting_review";
       requirement.currentStageId = stage.id;
@@ -1141,9 +1155,12 @@ function executeStage(requirementId, stageId, options = {}) {
   eventSource.onerror = (error) => {
     console.error("SSE Error:", error);
     eventSource.close();
-    // 熔断防翻车，回退到普通逻辑
-    addLog(requirement, stage.id, `API 响应异常，已熔断并尝试重新生成。`);
-    finalizeStage(requirementId, stageId); 
+    // 熔断拦截，不使用假数据覆盖
+    stage.status = "rejected";
+    requirement.overallStatus = "blocked";
+    addLog(requirement, stage.id, `API 响应异常！不使用预置假数据兜底，请修复后点击重跑。`);
+    saveState();
+    render();
   };
 }
 
