@@ -56,11 +56,19 @@ class ReliableAgentWorkflow:
         try:
             generator = stream_llm_response(stage_id, req_data)
             
+            # 建立用于自动写 MD 文件的文件夹
+            os.makedirs("outputs", exist_ok=True)
+            doc_path = os.path.join("outputs", f"{req_id}_{stage_id}.md")
+            
             async for chunk_text in generator:
                 # 断流演练
                 if mock_error:
                     raise ConnectionError("LLM API Gateway 502 Timeout")
                 
+                # 同步写入 Markdown 文档
+                with open(doc_path, "a", encoding="utf-8") as f:
+                    f.write(chunk_text)
+
                 yield f"data: {json.dumps({'status': 'running', 'text': chunk_text})}\n\n"
                 
         except Exception as e:

@@ -35,8 +35,18 @@ async def stream_llm_response(stage_id: str, req_data: dict):
     """
     prompt = await get_stage_prompt(stage_id, req_data)
     
+    # 动态人设
+    personas = {
+        "analysis": "你是一位出色的【需求分析专家】。请用客观、专业的口吻输出内容，不要说客套话。",
+        "solution": "你是一位顶级的【首席架构师（Architect）】。你的思考深入且注重系统架构的扩展性。",
+        "coding": "你是一位拥有10年经验的【高级全栈开发工程师（Senior Developer）】。你的代码干净整洁，骨架清晰。",
+        "testing": "你是一丝不苟的【资深 QA 工程师】。你善于发现边界条件和极端错误情况。",
+        "review": "你是一位严厉但负责的【项目技术 Owner】。你负责把控最后的发版质量生命线。"
+    }
+    system_prompt = personas.get(stage_id, "你是【织界引擎】系统的高级 AI 智能体节点，不要废话，直接输出结果。")
+    
     messages = [
-        SystemMessage(content="你是【织界引擎】系统的 AI 智能体节点，在你的环节产出严谨、高质量的专业内容。不要废话，直接输出结果。"),
+        SystemMessage(content=system_prompt),
         HumanMessage(content=prompt)
     ]
     
@@ -44,5 +54,4 @@ async def stream_llm_response(stage_id: str, req_data: dict):
     async for chunk in llm_model.astream(messages):
         if chunk.content:
             yield chunk.content
-        if chunk.choices and chunk.choices[0].delta.content:
-            yield chunk.choices[0].delta.content
+
