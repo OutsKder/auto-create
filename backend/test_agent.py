@@ -16,17 +16,27 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
         base_url=BASE_URL,
         model=MODEL,
         temperature=0.1, # QA needs low temp
-        max_tokens=2048
+        max_tokens=1536
     )
 
     sys_prompt = f"""你是一个高级资深自动化测试工程师 Agent (QA/SDET)。
-你的任务是为已经生成的业务代码编写测试脚本，并运行测试来验证代码质量。
-你的工作目录（沙箱）相对路径始终从当前文件夹开始，并且开发人员的代码已经存在于此。
-你拥有四个能力：
-1. `write_file_tool`: 创建/覆盖写入测试文件（例如 test_main.py）或者修复业务代码。
-2. `run_command_tool`: 运行测试命令（例如 python test_main.py）
-3. `read_file_tool`: 读取沙箱中的文件（看懂业务代码细节）
-4. `list_dir_tool`: 看一下沙箱目录有哪些文件
+你的任务是为已经生成的业务代码编写测试脚本，并运行测试来验证代码质量。对于复杂项目，你可能需要自己梳理测试环境和架构。
+
+【白盒测试与强力诊断】
+1. **测试前环境检测**：
+   - 优先使用 `list_dir_tool` 查看当前存在什么文件（如 `.py`、`package.json`）。
+   - 如果开发遗漏了三方库，你有权限使用 `run_command_tool` 先行安装依赖包（如 `pip install pytest`）。
+2. **源码级阅读 (White-box testing)**：
+   - 如果不确切知道某个类名、模块如何引入，一定要使用 `read_file_tool` 打开源码阅读，绝不靠瞎猜写用例。
+3. **精准报错自愈逻辑**：
+   - 测试运行（`run_command_tool`）失败时，注意提取控制台打印出的报错堆栈。
+   - 不要只依靠异常栈直接覆盖写入源文件。如有必要，通过 `read_file_tool` 查看报错涉及到的实际业务代码行逻辑，确认是逻辑错误还是你的测试写的不对。
+
+你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有四个能力：
+1. `write_file_tool`: 创建/覆盖写入测试文件（或强行修复业务代码）。
+2. `run_command_tool`: 运行依赖安装和测试脚本。
+3. `read_file_tool`: 读取沙箱中的文件以进行代码诊断。
+4. `list_dir_tool`: 探测沙箱目录的内容结构。
 
 需求资料回顾：
 需求：{req_data.get('title')}
@@ -74,9 +84,18 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
 
     yield '> 🎯 **Test Agent (QA 智能体) 启动**：接管环境空间 `' + workspace + '`\n\n'
     await asyncio.sleep(0.5)
+    
+    import re
+    def truncate(t: str, limit=1000):
+        if not t: return ""
+        return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
 
     max_loops = 50
     for loop_idx in range(max_loops):
+        # 动态裁剪历史防止 Token 溢出 (保留 SystemPrompt 和 HumanPrompt，外加最近的 6 条记录)
+        if len(messages) > 8:
+            messages = [messages[0], messages[1]] + messages[-6:]
+
         yield f'> 🕵️ **QA 思考与探测中...** (第 {loop_idx + 1}/{max_loops} 轮)\n\n'
 
         # Invoke LLM
@@ -128,25 +147,29 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
             yield f'> 🖥️ **动作 [执行测试命令]**：`{cmd}`\n\n'       
             res = tools.run_command(cmd)
 
+            # 截断过长输出，防止 Token 撑爆
+            def truncate(t: str, limit=1000):
+                if not t: return ""
+                return t if len(t) < limit else t[:limit//2] + "\n...[日志过长已截断]...\n" + t[-limit//2:]
+
+            safe_out = truncate(res['output'])
+            safe_err = truncate(res['error'])
+
             if res["success"]:
-                log = f"Success! STDOUT:\n{res['output']}"
+                log = f"Success! STDOUT:\n{safe_out}"
                 messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}"))
-                yield f'> ✅ **测试通过**：\n\n```text\n{res["output"]}\n```\n\n'
+                yield f'> ✅ **测试通过**：\n\n```text\n{safe_out}\n```\n\n'
             else:
-                log = f"Failed! STDOUT:\n{res['output']}\nSTDERR:\n{res['error']}"
-                messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}\n请分析并修复代码。"))
+                log = f"Failed! STDOUT:\n{safe_out}\nSTDERR:\n{safe_err}"
+                messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}\n测试包含断言失败或其它报错，请利用 read_file_tool 读取报错提及的具体文件进行诊断，必要时使用 write_file_tool 修复原业务代码！"))
                 yield f'> ❌ **测试报错**：捕获到异常日志，正在反馈给 QA 大脑寻找 Bug...\n\n```text\n{log}\n```\n\n'
 
         elif action == "read_file_tool":
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{res}"))
-            yield f'> ✅ **读取完成**\n\n'
-
-        elif action == "list_dir_tool":
-            dirpath = action_input.get("relative_path", ".")
-            yield f'> 📂 **动作 [列出目录]**：`{dirpath}`\n\n'
+            safe_res = truncate(res, limit=2000)
+            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
             res = tools.list_dir(dirpath)
             messages.append(HumanMessage(content=f"系统反馈 (list_dir):\n{res}"))
             yield f'> ✅ **列表完成**\n\n'

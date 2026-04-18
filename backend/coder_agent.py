@@ -70,19 +70,29 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         base_url=BASE_URL,
         model=MODEL,
         temperature=0.1,
-        max_tokens=2048
+        max_tokens=1536
     )
 
-    sys_prompt = f"""你是一个高级资深全栈工程师 Agent。
-你的任务是根据给定的需求和架构文档，进行代码编写。
-在编码过程中，你可以通过编写代码和执行小测试来逐步验证代码的正确性，并根据结果调整代码。
+    sys_prompt = f"""你是一个高级资深全栈工程师 Agent (架构与全栈实现)。
+你的任务是根据给定的需求和架构文档，进行代码编写。对于复杂项目，你必须先规划后执行。
+
+【核心工作流与要求】
+1. **任务拆解与环境准备**：
+   - 如果是一个可能需要第三方依赖的项目（如 Python requests, pandas 或是 Node.js 工程），你应当优先使用 `write_file_tool` 创建配置（`requirements.txt` 或 `package.json`）。
+   - 然后使用 `run_command_tool` 安装依赖（比如 `pip install -r requirements.txt`，沙箱自带网络与包管理权限）。
+   - 开始写逻辑代码前，可以先用注释的方式写一个内部 Plan 作为指引。
+2. **循序渐进地构建与测试**：
+   - 编码过程中，你可以通过编写代码和执行测试（`run_command_tool`）来逐步验证代码的正确性，并根据结果调整代码。
+   - 当遇到上下文模糊时，通过 `list_dir_tool` 和 `read_file_tool` 搞清楚现有的文件协议和入口逻辑，不要瞎猜。
+
 你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有四个能力：
 1. `write_file_tool`: 创建/覆盖写入文件
-2. `run_command_tool`: 运行测试命令（你可以用它来局部测试你的代码运行是否正常，随时运行验证）
+2. `run_command_tool`: 运行系统命令（你可以用它来安装依赖包、局部执行代码测试验证）
 3. `read_file_tool`: 读取沙箱中已存在的文件
 4. `list_dir_tool`: 列出沙箱目录内容
 
-需求：{req_data.get('title')}
+需求资料：
+标题：{req_data.get('title')}
 背景：{req_data.get('background')}
 架构信息参考：
 {arch_context}
@@ -122,8 +132,16 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 
     import re
 
+    def truncate(t: str, limit=1000):
+        if not t: return ""
+        return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
+
     max_loops = 50
     for loop_idx in range(max_loops):
+        # 动态裁剪历史防止 Token 溢出 (保留 SystemPrompt 和 HumanPrompt，外加最近的 6 条记录)
+        if len(messages) > 8:
+            messages = [messages[0], messages[1]] + messages[-6:]
+
         yield f'> 🧠 **Agent 思考中...** (第 {loop_idx + 1}/{max_loops} 轮)\n\n'
 
         # Invoke LLM
@@ -173,20 +191,27 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             yield f'> 🖥️ **动作 [执行命令]**：`{cmd}`\n\n'
             res = tools.run_command(cmd)
 
+            # 截断过长输出，防止 Token 撑爆
+            pass
+
+            safe_out = truncate(res['output'])
+            safe_err = truncate(res['error'])
+
             if res["success"]:
-                log = f"Success! STDOUT:\n{res['output']}"
+                log = f"Success! STDOUT:\n{safe_out}"
                 messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}"))
-                yield f'> ✅ **执行通过**：\n\n```text\n{res["output"]}\n```\n\n'
+                yield f'> ✅ **执行通过**：\n\n```text\n{safe_out}\n```\n\n'
             else:
-                log = f"Failed! STDOUT:\n{res['output']}\nSTDERR:\n{res['error']}"
-                messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}\n请分析报错并修复代码。"))
+                log = f"Failed! STDOUT:\n{safe_out}\nSTDERR:\n{safe_err}"
+                messages.append(HumanMessage(content=f"系统反馈 (run_command):\n{log}\n请分析报错并使用 read_file_tool 查看堆栈中涉及的文件具体行号后，再尝试 write_file_tool 修复代码。不要盲目瞎猜问题。"))
                 yield f'> ❌ **执行报错**：正在自愈修复...\n\n```text\n{log}\n```\n\n'
                 
         elif action == "read_file_tool":
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{res}"))
+            safe_res = truncate(res, limit=2000)
+            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
             yield f'> ✅ **读取完成**\n\n'
 
         elif action == "list_dir_tool":
