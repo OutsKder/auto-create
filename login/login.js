@@ -119,7 +119,7 @@ function syncAuthModeUI() {
   loginSubmitBtn.textContent = isRegister ? "注册并进入工作台" : "登录并进入工作台";
 }
 
-function handleSendCode() {
+async function handleSendCode() {
   clearFeedback();
   const email = emailInput.value.trim();
   if (!isValidEmail(email)) {
@@ -133,7 +133,7 @@ function handleSendCode() {
     return;
   }
 
-  const result = window.AuthSession.issueEmailCode(email);
+  const result = await window.AuthSession.issueEmailCode(email);
   if (!result || !result.ok) {
     setFeedback((result && result.message) || "验证码发送失败，请稍后重试。", "error");
     return;
@@ -271,7 +271,7 @@ function handleFormKeydown(event) {
   clearFeedback();
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event.preventDefault();
   clearFeedback();
 
@@ -301,7 +301,7 @@ function handleSubmit(event) {
   setSubmitting(true);
   setFeedback(authMode === "register" ? "正在校验验证码并创建账号..." : "正在校验账号凭证...", "success");
 
-  window.setTimeout(() => {
+  window.setTimeout(async () => {
     if (!window.AuthSession) {
       setSubmitting(false);
       setFeedback("认证服务不可用，请刷新重试。", "error");
@@ -309,24 +309,24 @@ function handleSubmit(event) {
     }
 
     if (authMode === "register") {
-      const registerResult = window.AuthSession.registerWithEmailCode({ email, password, code });
+      const registerResult = await window.AuthSession.registerWithEmailCode({ email, password, code });
       if (!registerResult || !registerResult.ok) {
         setSubmitting(false);
         setFeedback((registerResult && registerResult.message) || "注册失败，请稍后重试。", "error");
         return;
       }
 
-      window.AuthSession.createSession({ email }, { remember: false });
+      await window.AuthSession.createSession(registerResult.user, { remember: false });
       setFeedback("注册成功，正在进入织界工作台。", "success");
     } else {
-      const loginResult = window.AuthSession.loginWithPassword({ email, password });
+      const loginResult = await window.AuthSession.loginWithPassword({ email, password });
       if (!loginResult || !loginResult.ok) {
         setSubmitting(false);
         setFeedback((loginResult && loginResult.message) || "登录失败，请检查账号信息。", "error");
         return;
       }
 
-      window.AuthSession.createSession({ email }, { remember });
+      await window.AuthSession.createSession(loginResult.user, { remember });
       setFeedback("登录成功，正在进入织界工作台。", "success");
     }
 

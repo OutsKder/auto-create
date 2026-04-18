@@ -1,5 +1,5 @@
 const STORAGE_KEY = "delivery-engine-mvp-v1";
-const API_BASE_URL = "http://127.0.0.1:8000/api/v1"; // 指向刚刚启动的 FastAPI 后端
+const USING_SUPABASE = Boolean(window.ZJSupabase && window.ZJSupabase.isEnabled());
 
 // 配置 marked.js 使用 highlight.js 进行代码高亮
 if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
@@ -119,28 +119,13 @@ async function handleRequirementSubmit(event) {
   };
 
   try {
-    // 拦截创建：请求真正的后端引擎
-    const res = await fetch(`${API_BASE_URL}/pipeline/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    
-    if (res.ok) {
-      const apiResult = await res.json();
-      console.log("后端初始化成功:", apiResult.requirement_id);
-      
-      // 仍然保留前端 state 的初始化，但可以植入后端的 ID
-      const requirement = createRequirement(payload, apiResult.requirement_id);
-      state.requirements.unshift(requirement);
-      state.selectedRequirementId = requirement.id;
-      
-      addLog(requirement, "intake", `已请求远端引擎创建需求 [${apiResult.requirement_id}] 并初始化流水线。`);
-      saveState();
-      requirementForm.reset();
-      render();
-      startOrResumePipeline(requirement.id);
-    }
+    const requirement = await persistRequirement(payload);
+    state.requirements.unshift(requirement);
+    state.selectedRequirementId = requirement.id;
+    saveState();
+    requirementForm.reset();
+    render();
+    startOrResumePipeline(requirement.id);
   } catch (e) {
     console.error("无法连接后端", e);
     // 回退到纯前端模式
@@ -153,6 +138,113 @@ async function handleRequirementSubmit(event) {
     render();
     startOrResumePipeline(requirement.id);  
   }
+}
+
+async function persistRequirement(payload) {
+  if (!USING_SUPABASE) {
+    return createRequirement(payload);
+  }
+
+  const session = window.AuthSession ? window.AuthSession.readSession() : null;
+  const currentUserEmail = session && session.user ? session.user.email : "";
+  const currentUserId = session && session.user ? session.user.userId : null;
+  const client = window.ZJSupabase.getClient();
+
+  let ownerUser = currentUserId ? { id: currentUserId } : null;
+  if (!ownerUser && currentUserEmail) {
+    const { data: userData } = await client.from("users").select("*").eq("email", currentUserEmail).maybeSingle();
+    ownerUser = userData || null;
+  }
+
+  if (!ownerUser) {
+    throw new Error("无法识别当前用户，无法写入需求。");
+  }
+
+  const projectName = "织界工作台";
+  const { data: existingProject } = await client
+    .from("projects")
+    .select("*")
+    .eq("name", projectName)
+    .eq("owner_user_id", ownerUser.id)
+    .maybeSingle();
+
+  let project = existingProject || null;
+  if (!project) {
+    const { data: projectData, error: projectError } = await client
+      .from("projects")
+      .insert({
+        name: projectName,
+        description: "织界引擎默认工作台项目",
+        owner_user_id: ownerUser.id,
+        status: "active",
+      })
+      .select()
+      .single();
+    if (projectError) {
+      throw projectError;
+    }
+    project = projectData;
+  }
+
+  const now = nowIso();
+  const initialStages = STAGE_DEFS.map((def, index) => ({
+    stage_key: def.id,
+    stage_name: def.name,
+    status: def.id === "intake" ? "completed" : "pending",
+    output: def.id === "intake" ? buildIntakeOutput(payload) : "",
+    note: "",
+    requires_review: def.requiresReview,
+    sort_order: index + 1,
+    updated_at: now,
+  }));
+
+  const { data: requirementData, error: requirementError } = await client
+    .from("requirements")
+    .insert({
+      project_id: project.id,
+      title: payload.title,
+      background: payload.background,
+      goal: payload.goal,
+      constraints: payload.constraints || null,
+      priority: payload.priority,
+      owner_user_id: ownerUser.id,
+      current_stage_id: "analysis",
+      overall_status: "draft",
+      created_by: ownerUser.id,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .single();
+
+  if (requirementError) {
+    throw requirementError;
+  }
+
+  const stagesPayload = initialStages.map((stage) => ({
+    requirement_id: requirementData.id,
+    ...stage,
+  }));
+
+  const { error: stageError } = await client.from("requirement_stages").insert(stagesPayload);
+  if (stageError) {
+    throw stageError;
+  }
+
+  const { error: logError } = await client.from("requirement_logs").insert({
+    requirement_id: requirementData.id,
+    stage_id: null,
+    action_type: "create",
+    message: "已创建需求并初始化 Pipeline。",
+    created_by: ownerUser.id,
+    created_at: now,
+    meta: { source: "web-ui" },
+  });
+  if (logError) {
+    throw logError;
+  }
+
+  return createRequirement(payload, requirementData.id);
 }
 
 function handleRequirementSelection(event) {
