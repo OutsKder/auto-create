@@ -765,8 +765,8 @@ function renderPipeline(requirement) {
               </div>
             </div>
           </div>
-          <div class="focus-summary">
-            ${escapeHtml(getStagePreview(focusedStage.output, 180))}
+          <div class="focus-summary markdown-body">
+            ${focusedStage.output ? (typeof marked !== 'undefined' ? marked.parse(focusedStage.output) : escapeHtml(focusedStage.output)) : "该阶段目前暂无详细内容。"}
           </div>
         </div>
         <div class="focus-insight-strip">
@@ -812,7 +812,7 @@ function renderStageCard(requirement, stage, index) {
   
   let outputHtml = '';
   if (stage.output) {
-    if (isFocused) {
+    if (isFocused || requirement.currentStageId === stage.id || stage.status === "running") {
       outputHtml = typeof marked !== 'undefined' ? marked.parse(stage.output) : escapeHtml(stage.output);
     } else {
       outputHtml = escapeHtml(getStagePreview(stage.output, 180));
@@ -1048,9 +1048,7 @@ function executeStage(requirementId, stageId, options = {}) {
   render();
 
   // 【核心改造】: 接入真实的 FastAPI SEE 接口，实现打字机效果
-  // 我们使用真实的 API (使用一个 fake 需求 ID 即可在 mock 时复用)
-  const fakeReqId = "demo-req-123"; 
-  const sseUrl = `${API_BASE_URL}/pipeline/${fakeReqId}/stage/${stageId}/execute/stream?mock=true`;
+  const sseUrl = `${API_BASE_URL}/pipeline/${requirementId}/stage/${stageId}/execute/stream?mock_error=false`;
   
   const eventSource = new EventSource(sseUrl);
 
