@@ -6,6 +6,9 @@
   const REMEMBER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const CODE_EXPIRE_MS = 5 * 60 * 1000;
   const USING_SUPABASE = Boolean(window.ZJSupabase && window.ZJSupabase.isEnabled());
+  const BACKEND_BASE_URL = String(
+    (window.ZHIJIE_BACKEND_CONFIG && window.ZHIJIE_BACKEND_CONFIG.baseUrl) || ""
+  ).replace(/\/$/, "");
 
   if (!USING_SUPABASE) {
     ensureDemoUser();
@@ -93,6 +96,38 @@
 
   function isSupabaseReady() {
     return Boolean(getSupabaseClient());
+  }
+
+  function isBackendAuthReady() {
+    return Boolean(BACKEND_BASE_URL);
+  }
+
+  async function postBackend(path, payload) {
+    if (!isBackendAuthReady()) {
+      throw new Error("Backend auth is not configured");
+    }
+
+    const response = await fetch(`${BACKEND_BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    let body = null;
+    try {
+      body = await response.json();
+    } catch (_error) {
+      body = null;
+    }
+
+    if (!response.ok) {
+      const detail = body && (body.detail || body.message) ? body.detail || body.message : "请求失败";
+      return { ok: false, message: detail, raw: body };
+    }
+
+    return { ok: true, data: body };
   }
 
   function readUsers() {
@@ -305,6 +340,24 @@
       return { ok: false, message: "邮箱不能为空。" };
     }
 
+    if (isBackendAuthReady()) {
+      const backendResult = await postBackend("/api/v1/auth/send-code", {
+        email: normalizedEmail,
+        purpose: "register",
+      });
+      if (!backendResult.ok) {
+        return { ok: false, message: backendResult.message || "验证码发送失败，请稍后重试。" };
+      }
+
+      return {
+        ok: true,
+        expiresInMs: Number(backendResult.data && backendResult.data.expires_in_seconds)
+          ? Number(backendResult.data.expires_in_seconds) * 1000
+          : CODE_EXPIRE_MS,
+        via: "backend",
+      };
+    }
+
     const code = String(Math.floor(100000 + Math.random() * 900000));
     try {
       await writeVerificationRecord(normalizedEmail, "register", code);
@@ -335,6 +388,22 @@
 
     if (!/^\d{6}$/.test(code)) {
       return { ok: false, message: "请输入 6 位数字验证码。" };
+    }
+
+    if (isBackendAuthReady()) {
+      const backendResult = await postBackend("/api/v1/auth/register", {
+        email: normalizedEmail,
+        password,
+        code,
+      });
+      if (!backendResult.ok) {
+        return { ok: false, message: backendResult.message || "注册失败，请稍后重试。" };
+      }
+
+      return {
+        ok: true,
+        user: backendResult.data && backendResult.data.user ? backendResult.data.user : { email: normalizedEmail },
+      };
     }
 
     const record = await fetchLatestVerificationRecord(normalizedEmail, "register");
@@ -413,6 +482,21 @@
 
     if (!normalizedEmail) {
       return { ok: false, message: "请输入邮箱。" };
+    }
+
+    if (isBackendAuthReady()) {
+      const backendResult = await postBackend("/api/v1/auth/login", {
+        email: normalizedEmail,
+        password,
+      });
+      if (!backendResult.ok) {
+        return { ok: false, message: backendResult.message || "登录失败，请检查账号信息。" };
+      }
+
+      return {
+        ok: true,
+        user: backendResult.data && backendResult.data.user ? backendResult.data.user : { email: normalizedEmail },
+      };
     }
 
     const user = isSupabaseReady() ? await fetchSupabaseUserByEmail(normalizedEmail) : findUserByEmail(normalizedEmail);

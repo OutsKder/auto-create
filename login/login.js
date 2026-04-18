@@ -140,7 +140,7 @@ async function handleSendCode() {
   }
 
   startSendCodeCooldown(CODE_COOLDOWN_SECONDS);
-  setFeedback(`验证码已发送（演示验证码：${result.code}，5 分钟内有效）。`, "success");
+  setFeedback("验证码已发送到你的邮箱，请在 5 分钟内完成验证。", "success");
 }
 
 function startSendCodeCooldown(seconds) {
