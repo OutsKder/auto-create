@@ -24,7 +24,7 @@ class FileSystemTools:
             f.write(content)
         return f"File {relative_path} written successfully."
 
-    def run_command(self, command: str, timeout: int = 15) -> dict:
+    def run_command(self, command: str, timeout: int = 300) -> dict:
         """在工作目录下执行命令"""
         try:
             result = subprocess.run(
@@ -70,7 +70,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         base_url=BASE_URL,
         model=MODEL,
         temperature=0.1,
-        max_tokens=1536
+        max_tokens=800
     )
 
     sys_prompt = f"""你是一个高级资深全栈工程师 Agent (架构与全栈实现)。
@@ -132,15 +132,39 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 
     import re
 
-    def truncate(t: str, limit=1000):
+    def truncate(t: str, limit=500):
         if not t: return ""
         return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
 
     max_loops = 50
     for loop_idx in range(max_loops):
-        # 动态裁剪历史防止 Token 溢出 (保留 SystemPrompt 和 HumanPrompt，外加最近的 6 条记录)
-        if len(messages) > 8:
-            messages = [messages[0], messages[1]] + messages[-6:]
+        # 动态记忆压缩机制：将中间的历史总结为一段精简的记忆上下文
+        if len(messages) > 6:
+            yield f'> 🧹 **触发记忆压缩**：正在浓缩历史日志...\n\n'
+            msgs_to_summarize = messages[2:-2]
+            history_text = ""
+            for m in msgs_to_summarize:
+                # 只给模型少量的上下文
+                c = m.content if len(m.content) < 800 else m.content[:800] + "...[截断]"
+                history_text += c + "\n"
+                
+            summary_request = [
+                SystemMessage(content="你是一个严谨的AI记忆压缩助手。请阅读以下Agent在沙箱中执行的操作记录，将其提炼为不超过300字的精华摘要。要求体现：做了什么动作、修改了哪些文件，当前还没解决的核心问题是什么。"),
+                HumanMessage(content=f"【历史记录】\n{history_text}")
+            ]
+            
+            summary_resp = await llm.ainvoke(summary_request)
+            compressed_memory = f"【之前的操作摘要】\n{summary_resp.content}\n\n请继续完成任务。"
+            
+            # 使用开头的2条 + 摘要 + 最后的两轮对白 组合出最新的 messages 数组
+            messages = [
+                messages[0],
+                messages[1],
+                HumanMessage(content=compressed_memory),
+                messages[-2],
+                messages[-1]
+            ]
+
 
         yield f'> 🧠 **Agent 思考中...** (第 {loop_idx + 1}/{max_loops} 轮)\n\n'
 
@@ -210,7 +234,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            safe_res = truncate(res, limit=2000)
+            safe_res = truncate(res, limit=800)
             messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
             yield f'> ✅ **读取完成**\n\n'
 
