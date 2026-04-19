@@ -16,7 +16,7 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
         base_url=BASE_URL,
         model=MODEL,
         temperature=0.1, # QA needs low temp
-        max_tokens=800
+        max_tokens=8192
     )
 
     sys_prompt = f"""你是一个高级资深自动化测试工程师 Agent (QA/SDET)。
@@ -32,11 +32,12 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
    - 测试运行（`run_command_tool`）失败时，注意提取控制台打印出的报错堆栈。
    - 不要只依靠异常栈直接覆盖写入源文件。如有必要，通过 `read_file_tool` 查看报错涉及到的实际业务代码行逻辑，确认是逻辑错误还是你的测试写的不对。
 
-你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有四个能力：
+你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有五个能力：
 1. `write_file_tool`: 创建/覆盖写入测试文件（或强行修复业务代码）。
 2. `run_command_tool`: 运行依赖安装和测试脚本。
 3. `read_file_tool`: 读取沙箱中的文件以进行代码诊断。
 4. `list_dir_tool`: 探测沙箱目录的内容结构。
+5. `semantic_search_tool`: (RAG查询) 对整个项目库进行语义检索，用于快速了解特定功能的代码细节，免去全文读取的负担。
 
 需求资料回顾：
 需求：{req_data.get('title')}
@@ -48,11 +49,12 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
 通过返回以下 JSON 格式来使用工具（必须用 ```json 原样包裹，且只返回单个 JSON 块）：
 ```json
 {{
-    "action": "write_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "finish",
+    "action": "write_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "semantic_search_tool" 或 "finish",
     "action_input": {{
         "relative_path": "相对路径，如果使用需要路径的工具",
         "content": "写入的代码内容，如果使用write_file_tool",       
-        "command": "运行的测试命令，如果使用run_command_tool",       
+        "command": "运行的测试命令，如果使用run_command_tool",
+        "query": "你想检索的功能细节或代码，如果使用semantic_search_tool",
         "test_passed": true 或 false, // 只有在finish时填写，表示最后到底是成功还是失败打回
         "message": "最终交付的测试报告文本，如果是finish"
     }}
@@ -61,10 +63,10 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
 
 **优先步骤：**
 1. 先查看一下沙箱里有什么文件（使用 `list_dir_tool`）。
-2. 如果需要，使用 `read_file_tool` 阅读代码实现。
-3. 写好测试文件 `write_file_tool`。
-4. 运行测试文件 `run_command_tool`。
-5. 如果测试没过，你有权限阅读报错、阅读业务代码、并再次使用 `write_file_tool` 去修改它们。
+2. 使用 `semantic_search_tool` 进行精确的代码或文档检索。
+3. 若还需要整体脉络，可使用 `read_file_tool` 阅读。
+4. 编写并运行测试文件。
+5. 如果不通过，再次使用检索和代码读写能力修复！
 
 **最后交付任务 (finish)：**
 当测试全部通过，或者即使尝试修复仍旧存在难以解决的问题而不得不终止时，你必须调用 `finish` 动作，并在 `message` 字段中根据你的执行过程输出一份《自动化测试总结报告》（Markdown格式）。
@@ -86,7 +88,7 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
     await asyncio.sleep(0.5)
     
     import re
-    def truncate(t: str, limit=500):
+    def truncate(t: str, limit=50000):
         if not t: return ""
         return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
 
@@ -171,7 +173,7 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
             res = tools.run_command(cmd)
 
             # 截断过长输出，防止 Token 撑爆
-            def truncate(t: str, limit=500):
+            def truncate(t: str, limit=50000):
                 if not t: return ""
                 return t if len(t) < limit else t[:limit//2] + "\n...[日志过长已截断]...\n" + t[-limit//2:]
 
@@ -191,11 +193,23 @@ async def stream_test_agent(req_id: str, req_data: dict, arch_context: str = "")
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            safe_res = truncate(res, limit=800)
+            safe_res = truncate(res, limit=100000)
             messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
+            yield f'> ✅ **读取完成**\n\n'
+
+        elif action == "list_dir_tool":
+            dirpath = action_input.get("relative_path", ".")
+            yield f'> 📂 **动作 [列出目录]**：`{dirpath}`\n\n'
             res = tools.list_dir(dirpath)
             messages.append(HumanMessage(content=f"系统反馈 (list_dir):\n{res}"))
             yield f'> ✅ **列表完成**\n\n'
+
+        elif action == "semantic_search_tool":
+            query = action_input.get("query", "")
+            yield f'> 🔍 **动作 [RAG代码检索]**：`{query}`...\n\n'
+            res = tools.semantic_search(query)
+            messages.append(HumanMessage(content=f"系统反馈 (semantic_search):\n{res}"))
+            yield f'> ✅ **RAG检索完成**，为你提供最精确的代码碎片！\n\n'
 
         else:
             messages.append(HumanMessage(content=f"系统反馈: Unknown action '{action}'"))

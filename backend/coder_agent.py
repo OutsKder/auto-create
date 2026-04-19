@@ -2,17 +2,54 @@ import os
 import subprocess
 import json
 import asyncio
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage, HumanMessage
 
-API_KEY = os.getenv("OPENAI_API_KEY", "key")
-BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.123.4.240:11499/v1/")        
-MODEL = "Qwen2.5-Coder-32B-Instruct-GPTQ-Int4/"
+API_KEY = os.getenv("DASHSCOPE_API_KEY")
+BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"        
+MODEL = "qwen3.5-122b-a10b"
 
 class FileSystemTools:
     def __init__(self, workspace_path: str):
         self.workspace = workspace_path
         os.makedirs(self.workspace, exist_ok=True)
+
+    def semantic_search(self, query: str, top_k: int = 5) -> str:
+        """对整个目录空间的代码和文件进行语义搜索"""
+        docs = []
+        for root, _, files in os.walk(self.workspace):
+            for file in files:
+                if file.startswith('.') or 'venv' in root or file.endswith(('.pyc', '.png', '.jpg')): continue
+                full_path = os.path.join(root, file)
+                try:
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        rel_path = os.path.relpath(full_path, self.workspace)
+                        # 简单的文本分块，切分为每段 1500 字符
+                        chunks = [content[i:i+1500] for i in range(0, len(content), 1500)]
+                        for idx, chunk in enumerate(chunks):
+                            docs.append({"content": f"File [{rel_path}] Chunk {idx}:\n{chunk}", "metadata": {"source": rel_path}})
+                except Exception:
+                    pass
+        
+        if not docs:
+            return "No readable files found in workspace for semantic search."
+            
+        embeddings = OpenAIEmbeddings(
+            api_key=API_KEY,
+            base_url=BASE_URL,
+            model="Qwen3-VL-Embedding"
+        )
+        texts = [d["content"] for d in docs]
+        metadatas = [d["metadata"] for d in docs]
+        
+        try:
+            vectorstore = FAISS.from_texts(texts, embeddings, metadatas=metadatas)
+            results = vectorstore.similarity_search(query, k=top_k)
+            return "\n\n---\n\n".join([res.page_content for res in results])
+        except Exception as e:
+            return f"Error in semantic search: {str(e)}"
 
     def write_file(self, relative_path: str, content: str) -> str:
         """模型调用的专门写文件的函数"""
@@ -70,7 +107,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         base_url=BASE_URL,
         model=MODEL,
         temperature=0.1,
-        max_tokens=800
+        max_tokens=8192
     )
 
     sys_prompt = f"""你是一个高级资深全栈工程师 Agent (架构与全栈实现)。
@@ -90,6 +127,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 2. `run_command_tool`: 运行系统命令（你可以用它来安装依赖包、局部执行代码测试验证）
 3. `read_file_tool`: 读取沙箱中已存在的文件
 4. `list_dir_tool`: 列出沙箱目录内容
+5. `semantic_search_tool`: (RAG查询) 对沙箱代码库与文档进行自然语言/语义检索，免去了全文读取的负担。推荐频繁使用！
 
 需求资料：
 标题：{req_data.get('title')}
@@ -101,11 +139,12 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 通过返回以下 JSON 格式来使用工具（必须用 ```json 原样包裹，且只返回单个 JSON 块）：
 ```json
 {{
-    "action": "write_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "finish",
+    "action": "write_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "semantic_search_tool" 或 "finish",
     "action_input": {{
         "relative_path": "相对路径，如果使用需要路径的工具",
         "content": "写入的代码内容，如果使用write_file_tool",       
         "command": "运行的测试命令，如果使用run_command_tool",
+        "query": "你想检索的代码逻辑或自然语言描述，如果使用semantic_search_tool",
         "message": "最终交付的文本，如果是finish"
     }}
 }}
@@ -132,7 +171,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 
     import re
 
-    def truncate(t: str, limit=500):
+    def truncate(t: str, limit=50000):
         if not t: return ""
         return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
 
@@ -234,7 +273,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            safe_res = truncate(res, limit=800)
+            safe_res = truncate(res, limit=100000)
             messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
             yield f'> ✅ **读取完成**\n\n'
 
@@ -244,6 +283,13 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             res = tools.list_dir(dirpath)
             messages.append(HumanMessage(content=f"系统反馈 (list_dir):\n{res}"))
             yield f'> ✅ **列表完成**\n\n'
+
+        elif action == "semantic_search_tool":
+            query = action_input.get("query", "")
+            yield f'> 🔍 **动作 [RAG代码检索]**：`{query}`...\n\n'
+            res = tools.semantic_search(query)
+            messages.append(HumanMessage(content=f"系统反馈 (semantic_search):\n{res}"))
+            yield f'> ✅ **RAG检索完成**，为你提供最精确的代码切片碎片！\n\n'
 
         else:
             messages.append(HumanMessage(content=f"系统反馈: Unknown action '{action}'"))
