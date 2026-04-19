@@ -94,7 +94,6 @@
                 <input id="rememberInput" name="remember" type="checkbox" />
                 <span>记住我（7 天）</span>
               </label>
-              <button type="button" id="quickFillBtn" class="ghost-btn">一键填充演示账号</button>
             </div>
 
             <div id="capsTip" class="caps-tip" aria-live="polite"></div>
@@ -103,8 +102,6 @@
             <button id="loginSubmitBtn" type="submit" class="primary-btn login-submit">
               登录并进入工作台
             </button>
-
-            <p class="login-hint">交互提示：支持回车提交、密码可视切换、鼠标跟随光效与点击涟漪。</p>
           </form>
 
           <div class="login-orbits" aria-hidden="true">
@@ -118,11 +115,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+      // 换项目/换 Supabase 实例时，替换 url 与 anonKey。
       window.ZHIJIE_SUPABASE_CONFIG = window.ZHIJIE_SUPABASE_CONFIG || {
         url: "https://xgcufukzlxwfkzozrbue.supabase.co",
         anonKey: "sb_publishable_QB8ZCty6cfsvF-yfpTuh9g_dQKkNF3g",
       };
 
+      // 后端地址：本机默认取当前域名；纯静态打开文件时回退到 127.0.0.1:8000。
+      // 如果后端部署在其他机器/端口，请把 baseUrl 改为对应地址。
       window.ZHIJIE_BACKEND_CONFIG = window.ZHIJIE_BACKEND_CONFIG || {
         baseUrl: window.location.protocol.indexOf("http") === 0 ? window.location.origin : "http://127.0.0.1:8000",
       };

@@ -9,7 +9,6 @@ const codeInput = document.getElementById("codeInput");
 const codeFieldWrap = document.getElementById("codeFieldWrap");
 const sendCodeBtn = document.getElementById("sendCodeBtn");
 const rememberInput = document.getElementById("rememberInput");
-const quickFillBtn = document.getElementById("quickFillBtn");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
 const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 const loginFeedback = document.getElementById("loginFeedback");
@@ -42,7 +41,6 @@ syncAuthModeUI();
 function bindLoginEvents() {
   loginForm.addEventListener("submit", handleSubmit);
   loginForm.addEventListener("keydown", handleFormKeydown);
-  quickFillBtn.addEventListener("click", fillDemoAccount);
   if (authModeSwitch) {
     authModeSwitch.addEventListener("click", handleAuthModeChange);
   }
@@ -115,7 +113,6 @@ function syncAuthModeUI() {
     rememberInput.closest("label")?.classList.toggle("is-hidden", isRegister);
   }
 
-  quickFillBtn.textContent = isRegister ? "一键填充注册信息" : "一键填充演示账号";
   loginSubmitBtn.textContent = isRegister ? "注册并进入工作台" : "登录并进入工作台";
 }
 
@@ -199,29 +196,6 @@ function handleCardTilt(event) {
 function resetCardTilt() {
   loginCard.style.setProperty("--tilt-x", "0");
   loginCard.style.setProperty("--tilt-y", "0");
-}
-
-function fillDemoAccount() {
-  if (authMode === "register") {
-    emailInput.value = "new.user@zhijie.engine";
-    passwordInput.value = "zhijie123";
-    if (codeInput) {
-      codeInput.value = "";
-    }
-    setFeedback("已填充注册信息，请发送验证码后完成注册。", "success");
-  } else {
-    emailInput.value = "demo@zhijie.engine";
-    passwordInput.value = "zhijie123";
-    setFeedback("已填充演示账号，可直接登录。", "success");
-  }
-
-  for (const wrap of fieldWraps) {
-    const input = wrap.querySelector("input");
-    if (!input) {
-      continue;
-    }
-    syncFieldFilledState(input, wrap);
-  }
 }
 
 function togglePasswordVisibility() {
