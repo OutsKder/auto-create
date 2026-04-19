@@ -47,7 +47,7 @@ class ReliableAgentWorkflow:
                 await asyncio.sleep(0.01)
                 
             self._finalize_stage(stage_id)
-            final_status = "waiting_review" if stage_id in ["solution", "review"] else "completed"
+            final_status = "completed" if stage_id == "delivery" else "waiting_review"
             yield f"data: {json.dumps({'status': final_status, 'text': '\\n'})}\n\n"
             return
             
@@ -84,6 +84,10 @@ class ReliableAgentWorkflow:
             os.makedirs("outputs", exist_ok=True)
             doc_path = os.path.join("outputs", f"{req_id}_{stage_id}.md")
             
+            # 清空重跑前的残留存档
+            # if os.path.exists(doc_path):
+            #    os.remove(doc_path)
+
             async for chunk_text in generator:
                 # 断流演练
                 if mock_error:
@@ -96,18 +100,12 @@ class ReliableAgentWorkflow:
                 yield f"data: {json.dumps({'status': 'running', 'text': chunk_text})}\n\n"
                 
         except Exception as e:
-            # 3. SSE 管道平滑接管 (Seamless Stream Rescue)
-            # 在任何流中断的地方，原地重启“神之路径通用回退”，补全缺失文本
-            yield f"\ndata: {json.dumps({'status': 'running', 'text': f'\\n\\n⚠️ **大模型节点异常**: {str(e)}。**回退链路无缝接管中...**\\n\\n'})}\n\n"
-            await asyncio.sleep(1)
-            
-            fallback_content = self.mocks.get("universal_fallback", "系统兜底方案已接管流程。")
-            for char in fallback_content:
-                yield f"data: {json.dumps({'status': 'running', 'text': char})}\n\n"
-                await asyncio.sleep(0.02)
+            # 3. 遇到报错直接中断，抛出异常信息让前端打回重试
+            yield f"\ndata: {json.dumps({'status': 'rejected', 'text': f'\\n\\n⚠️ **管道异常断开**: {str(e)}。**请在工作台人工打回重新运行此节点。**\\n\\n'})}\n\n"
+            return
 
         # 5. 阶段完成判定
-        final_status = "waiting_review" if stage_id in ["solution", "review"] else "completed"
+        final_status = "completed" if stage_id == "delivery" else "waiting_review"
         finish_chunk = json.dumps({'status': final_status, 'text': '\n'})
         yield f"data: {finish_chunk}\n\n"
 

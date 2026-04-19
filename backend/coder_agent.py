@@ -2,13 +2,14 @@ import os
 import subprocess
 import json
 import asyncio
+import shutil
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage, HumanMessage
 
 API_KEY = os.getenv("DASHSCOPE_API_KEY")
 BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"        
-MODEL = "qwen3.5-122b-a10b"
+MODEL = "qwen3.5-27b"
 
 class FileSystemTools:
     def __init__(self, workspace_path: str):
@@ -39,7 +40,7 @@ class FileSystemTools:
         embeddings = OpenAIEmbeddings(
             api_key=API_KEY,
             base_url=BASE_URL,
-            model="Qwen3-VL-Embedding"
+            model="qwen3-vl-embedding"
         )
         texts = [d["content"] for d in docs]
         metadatas = [d["metadata"] for d in docs]
@@ -61,8 +62,23 @@ class FileSystemTools:
             f.write(content)
         return f"File {relative_path} written successfully."
 
-    def run_command(self, command: str, timeout: int = 300) -> dict:
-        """在工作目录下执行命令"""
+    def replace_in_file(self, relative_path: str, old_str: str, new_str: str) -> str:
+        """替换文件中的某一段文本，极大地节省token。传入需要替换的原字符串和新字符串。"""
+        full_path = os.path.join(self.workspace, relative_path)
+        assert os.path.abspath(full_path).startswith(os.path.abspath(self.workspace))
+        if not os.path.exists(full_path):
+            return f"Error: File {relative_path} does not exist."
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        if old_str not in content:
+            return "Error: Exact old_str not found in the file. Watch out for exact whitespace matching."
+        content = content.replace(old_str, new_str)
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return f"File {relative_path} modified successfully with string replacement."
+
+    def run_command(self, command: str, timeout: int = 15) -> dict:
+        """在工作目录下执行短暂命令。限制了最长只能运行 15 秒防止一直卡住。"""
         try:
             result = subprocess.run(
                 command,
@@ -100,6 +116,15 @@ class FileSystemTools:
 async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""):
     # 建立沙箱
     workspace = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", f"target_project_{req_id}"))
+    template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "template_project"))
+    
+    # 每次都从模板项目复制一份骨架到沙箱中
+    if not os.path.exists(workspace):
+        if os.path.exists(template_dir):
+            shutil.copytree(template_dir, workspace)
+        else:
+            os.makedirs(workspace, exist_ok=True)
+
     tools = FileSystemTools(workspace)
 
     llm = ChatOpenAI(
@@ -110,24 +135,35 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         max_tokens=8192
     )
 
+    # 提取之前人类打回或留下的审核意见（支持接着直接写）
+    feedback_note = ""
+    stage_data = req_data.get("stages", {}).get("coding", {})
+    if stage_data.get("human_note"):
+        feedback_note = f"\n\n🚨 【重要！来自人类的最新打回/修改意见】\n{stage_data.get('human_note')}\n\n当前沙箱已经保存了你上一次写的代码，请基于上面的意见，使用搜索工具定位代码中的问题并直接往下修改功能（不要重新初始化脚手架）！"
+
     sys_prompt = f"""你是一个高级资深全栈工程师 Agent (架构与全栈实现)。
-你的任务是根据给定的需求和架构文档，进行代码编写。对于复杂项目，你必须先规划后执行。
+你的任务是根据给定的需求和架构文档，进行代码微调和二次开发。{feedback_note}
 
-【核心工作流与要求】
-1. **任务拆解与环境准备**：
-   - 如果是一个可能需要第三方依赖的项目（如 Python requests, pandas 或是 Node.js 工程），你应当优先使用 `write_file_tool` 创建配置（`requirements.txt` 或 `package.json`）。
-   - 然后使用 `run_command_tool` 安装依赖（比如 `pip install -r requirements.txt`，沙箱自带网络与包管理权限）。
-   - 开始写逻辑代码前，可以先用注释的方式写一个内部 Plan 作为指引。
-2. **循序渐进地构建与测试**：
-   - 编码过程中，你可以通过编写代码和执行测试（`run_command_tool`）来逐步验证代码的正确性，并根据结果调整代码。
-   - 当遇到上下文模糊时，通过 `list_dir_tool` 和 `read_file_tool` 搞清楚现有的文件协议和入口逻辑，不要瞎猜。
+【核心工作流与要求 - 极大减少Token消耗策略】
+1. **现有框架已准备就绪**：
+   - 你的沙箱当前已一套预先写好极简前后的 **Template Project** 骨架！里面包含 `backend/main.py`（FastAPI完整逻辑）、`frontend/index.html`与`app.js`（已有列表渲染、交互逻辑）。如果是打回重做，它还包含你刚才修改过的进度！
+   - **绝对不要从头开始写项目！绝对不要重新输出整个文件！**
+   - 优先通过只改动几行代码来完成业务需求，极致复用现在的代码。
+2. **任务执行策略**：
+   - 先通过 `list_dir_tool` 并阅读 `README.md` 来掌握当前工程结构。
+   - 不要大段地读取源文件，通过 `semantic_search_tool` 直接定位需要增加字段或路由的地方。
+   - 直接用 `write_file_tool` 去补充修改必要的地方。如果是追加，可以直接覆盖或者用替换思维改写小部分。
+3. **边改边测**：
+   - 如果需要测试代码有没有语法错误，可以用 `run_command_tool` 运行（例如 `python -m py_compile backend/main.py`）。
+   - ⚠️ **绝对禁止执行 `uvicorn main:app` 或 `npm run dev` 等会永远阻塞的持久化服务端命令！！这会导致整个流水线死锁卡住！** 只需要改完代码确保没有语法错误即可交付。
 
-你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有四个能力：
-1. `write_file_tool`: 创建/覆盖写入文件
-2. `run_command_tool`: 运行系统命令（你可以用它来安装依赖包、局部执行代码测试验证）
-3. `read_file_tool`: 读取沙箱中已存在的文件
-4. `list_dir_tool`: 列出沙箱目录内容
-5. `semantic_search_tool`: (RAG查询) 对沙箱代码库与文档进行自然语言/语义检索，免去了全文读取的负担。推荐频繁使用！
+你的工作目录（沙箱）相对路径始终从当前文件夹开始。你拥有六个能力：
+1. `write_file_tool`: 创建/覆盖整个文件 (消耗海量Token，仅创建新文件用！)
+2. `replace_in_file_tool`: 局部替换文件特定段落(传递old_str和new_str)，精准高效省Token！
+3. `run_command_tool`: 运行系统命令（你可以用它来安装依赖包、局部执行代码测试验证）
+4. `read_file_tool`: 读取沙箱中已存在的文件
+5. `list_dir_tool`: 列出沙箱目录内容
+6. `semantic_search_tool`: (RAG查询) 对沙箱代码库与文档进行自然语言/语义检索，免去了全文读取的负担。推荐频繁使用！
 
 需求资料：
 标题：{req_data.get('title')}
@@ -139,10 +175,12 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 通过返回以下 JSON 格式来使用工具（必须用 ```json 原样包裹，且只返回单个 JSON 块）：
 ```json
 {{
-    "action": "write_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "semantic_search_tool" 或 "finish",
+    "action": "write_file_tool" 或 "replace_in_file_tool" 或 "run_command_tool" 或 "read_file_tool" 或 "list_dir_tool" 或 "semantic_search_tool" 或 "finish",
     "action_input": {{
-        "relative_path": "相对路径，如果使用需要路径的工具",
-        "content": "写入的代码内容，如果使用write_file_tool",       
+        "relative_path": "相对路径，如果涉及到文件相关的操作",
+        "content": "写入的代码内容，仅使用write_file_tool时",
+        "old_str": "需要被替换的旧字符串内容(必须精确匹配连同空白)，仅使用replace_in_file_tool时",
+        "new_str": "替换后的新代码段，仅使用replace_in_file_tool时",
         "command": "运行的测试命令，如果使用run_command_tool",
         "query": "你想检索的代码逻辑或自然语言描述，如果使用semantic_search_tool",
         "message": "最终交付的文本，如果是finish"
@@ -163,7 +201,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
 
     messages = [
         SystemMessage(content=sys_prompt),
-        HumanMessage(content="请开始进行编码实现与边写边自测。")
+        HumanMessage(content="请开始进行编码实现。如果是打回任务，请先阅读最新打回意见，用 semantic_search_tool 找到问题并直接修复，边改边测。")
     ]
 
     yield '> 🚀 **Coder Agent 启动**：环境隔离完毕，工作空间位于 `' + workspace + '`\n\n'
@@ -175,31 +213,33 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         if not t: return ""
         return t if len(t) < limit else t[:limit//2] + "\n...[内容过长已为您截断]...\n" + t[-limit//2:]
 
-    max_loops = 50
+    max_loops = 20
     for loop_idx in range(max_loops):
         # 动态记忆压缩机制：将中间的历史总结为一段精简的记忆上下文
-        if len(messages) > 6:
+        if len(messages) > 15:
             yield f'> 🧹 **触发记忆压缩**：正在浓缩历史日志...\n\n'
-            msgs_to_summarize = messages[2:-2]
+            msgs_to_summarize = messages[2:-4]
             history_text = ""
             for m in msgs_to_summarize:
                 # 只给模型少量的上下文
                 c = m.content if len(m.content) < 800 else m.content[:800] + "...[截断]"
                 history_text += c + "\n"
-                
+
             summary_request = [
                 SystemMessage(content="你是一个严谨的AI记忆压缩助手。请阅读以下Agent在沙箱中执行的操作记录，将其提炼为不超过300字的精华摘要。要求体现：做了什么动作、修改了哪些文件，当前还没解决的核心问题是什么。"),
-                HumanMessage(content=f"【历史记录】\n{history_text}")
+                HumanMessage(content=f"【历史记录】\n{history_text}")      
             ]
-            
+
             summary_resp = await llm.ainvoke(summary_request)
             compressed_memory = f"【之前的操作摘要】\n{summary_resp.content}\n\n请继续完成任务。"
-            
-            # 使用开头的2条 + 摘要 + 最后的两轮对白 组合出最新的 messages 数组
+
+            # 使用开头的2条 + 摘要 + 最后的四轮对白 组合出最新的 messages 数组
             messages = [
                 messages[0],
                 messages[1],
                 HumanMessage(content=compressed_memory),
+                messages[-4],
+                messages[-3],
                 messages[-2],
                 messages[-1]
             ]
@@ -240,7 +280,7 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
         elif action == "write_file_tool":
             filepath = action_input.get("relative_path")
             content = action_input.get("content")
-            yield f'> 📝 **动作 [写文件]**：正在向 `{filepath}` 写入代码...\n\n'
+            yield f'> 📝 **动作 [写文件]**：正在向 `{filepath}` 写入全文...\n\n'
             try:
                 res = tools.write_file(filepath, content)
                 messages.append(HumanMessage(content=f"系统反馈 (write_file): {res}"))
@@ -248,6 +288,19 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             except Exception as e:
                 messages.append(HumanMessage(content=f"系统反馈: Error -> {str(e)}"))
                 yield f'> ❌ **写入失败**: {e}\n\n'
+
+        elif action == "replace_in_file_tool":
+            filepath = action_input.get("relative_path")
+            old_str = action_input.get("old_str")
+            new_str = action_input.get("new_str")
+            yield f'> ✂️ **动作 [局部替换]**：正在修改 `{filepath}` ...\n\n'
+            try:
+                res = tools.replace_in_file(filepath, old_str, new_str)
+                messages.append(HumanMessage(content=f"系统反馈 (replace_in_file): {res}"))
+                yield f'> ✅ **替换结果**: {res}\n\n'
+            except Exception as e:
+                messages.append(HumanMessage(content=f"系统反馈: Error -> {str(e)}"))
+                yield f'> ❌ **替换失败**: {e}\n\n'
 
         elif action == "run_command_tool":
             cmd = action_input.get("command")
@@ -273,9 +326,11 @@ async def stream_coder_agent(req_id: str, req_data: dict, arch_context: str = ""
             filepath = action_input.get("relative_path", "")
             yield f'> 📖 **动作 [读文件]**：读取 `{filepath}`...\n\n'
             res = tools.read_file(filepath)
-            safe_res = truncate(res, limit=100000)
-            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{safe_res}"))
-            yield f'> ✅ **读取完成**\n\n'
+            # 限制读取内容，以免浪费 Token。鼓励它用 semantic_search
+            if len(res) > 8000:
+                res = res[:8000] + "\n\n...[文件过长，截断了后续部分。请勿反复尝试直接读取整个大文件，必须改用 semantic_search_tool 进行精准检索！]..."
+            
+            messages.append(HumanMessage(content=f"系统反馈 (read_file):\n{res}"))
 
         elif action == "list_dir_tool":
             dirpath = action_input.get("relative_path", ".")

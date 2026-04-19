@@ -3,23 +3,31 @@ import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-# 初始化给定的 Qwen 语言模型后端
+# 初始化给定的 Qwen 语言模型后端 (统一使用 DashScope Qwen3.5)
 llm_model = ChatOpenAI(
-    model="Qwen2.5-Coder-32B-Instruct-GPTQ-Int4/",
-    base_url="http://47.123.4.240:11499/v1/",
-    api_key="key",  # 根据要求直接硬编码
+    model="qwen3.5-27b",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
     streaming=True,
-    max_tokens=2048
+    max_tokens=1536
 )
 
 async def get_stage_prompt(stage_id: str, req_data: dict) -> str:
     """生成每个节点的专属 Prompt"""
+    
+    # 提取人类打回的新反馈
+    feedback_note = ""
+    stage_data = req_data.get("stages", {}).get(stage_id, {})
+    if stage_data.get("human_note"):
+        feedback_note = f"\n\n🚨 【重要！来自人类的最新打回/修改意见】\n{stage_data.get('human_note')}\n请你仔细阅读上述意见，对本次生成的方案进行纠正和针对性完善！\n"
+
     base_info = f"""
 【需求来源信息】
 标题：{req_data.get('title')}
 背景：{req_data.get('background', '未提供')}
 目标：{req_data.get('goal', '未提供')}
 限制：{req_data.get('constraints', '未提供')}
+{feedback_note}
 """
     prompts = {
         "analysis": f"""你是一位拥有十多年顶级互联网经验的【资深产品总监（Product Director）】。你需要对以下粗略的原始需求进行深度、极具结构化的拆解分析。请基于第一性原理，不要浮于表面，深挖用户真实痛点并评估长期业务价值。由于这是初步需求，你需要像剥洋葱一样把它展开。

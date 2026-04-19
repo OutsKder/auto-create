@@ -61,13 +61,27 @@ async def audit_stage(req_id: str, stage_id: str, payload: AuditAction):
     return {"status": "success", "message": f"节点 {stage_id} 获得权限"}
 
 @app.get("/api/v1/pipeline/{req_id}/stage/{stage_id}/execute/stream")
-async def execute_stage_stream(req_id: str, stage_id: str, mock_error: bool = False):
+async def execute_stage_stream(
+    req_id: str, 
+    stage_id: str, 
+    mock_error: bool = False,
+    title: str = "",
+    background: str = "",
+    goal: str = "",
+    constraints: str = ""
+):
     """
     这里我们将直接挂载写好的抗灾多路由 SSE 生成管道！
     """
     if req_id not in FAKE_DB["requirements"]:
-        raise HTTPException(status_code=404, detail="REQ NOT FOUND")
-        
+        if title:
+            # 服从前端发送的恢复参数，避免后端服务热刷新后丢失上下文导致无法重跑
+            FAKE_DB["requirements"][req_id] = {
+                "id": req_id, "title": title, "background": background,
+                "goal": goal, "constraints": constraints
+            }
+        else:
+            raise HTTPException(status_code=404, detail="REQ NOT FOUND")
     req_data = FAKE_DB["requirements"][req_id]
     
     # 核心接入智能体容灾编排

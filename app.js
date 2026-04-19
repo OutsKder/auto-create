@@ -19,11 +19,11 @@ if (window.AuthSession) {
 
 const STAGE_DEFS = [
   { id: "intake", name: "需求录入", requiresReview: false },
-  { id: "analysis", name: "需求分析", requiresReview: true },
-  { id: "solution", name: "方案设计", requiresReview: true },
-  { id: "coding", name: "编码实现", requiresReview: true },
-  { id: "testing", name: "测试验证", requiresReview: true },
-  { id: "review", name: "评审确认", requiresReview: true },
+  { id: "analysis", name: "需求分析", requiresReview: false },
+  { id: "solution", name: "方案设计", requiresReview: false },
+  { id: "coding", name: "编码实现", requiresReview: false },
+  { id: "testing", name: "测试验证", requiresReview: false },
+  { id: "review", name: "评审确认", requiresReview: false },
   { id: "delivery", name: "交付归档", requiresReview: false },
 ];
 
@@ -373,10 +373,14 @@ function sanitizeState(rawState) {
       ...req,
       logs: Array.isArray(req.logs) ? req.logs : [],
       stages: Array.isArray(req.stages)
-        ? req.stages.map((stage) => ({
-            ...stage,
-            status: stage.status === "running" ? "pending" : stage.status,
-          }))
+        ? req.stages.map((stage) => {
+            const status = stage.status === "running" ? "pending" : (stage.status === "waiting_review" ? "completed" : stage.status);
+            return {
+              ...stage,
+              status: status,
+              requiresReview: false
+            };
+          })
         : [],
     })),
   };

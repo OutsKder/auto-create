@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务微调展示模板 Demo</title>
+    <!-- 使用 CDN 引入 Bootstrap 提供基础排版 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+    <h1 class="mb-4 text-center">基础业务微调模板大盘</h1>
+    <p class="text-center text-muted">目前内置了 Item 的列表展示和添加，后续可在此增加弹窗或自定义表格组件</p>
+
+    <!-- 核心布局：左表单、右列表 -->
+    <div class="row g-4 mt-3">
+        <!-- AI Agent：如新增功能，请复制这份卡片结构并重命名 ID -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">添加新的 Item</div>
+                <div class="card-body">
+                    <form id="addItemForm">
+                        <div class="mb-3">
+                            <label class="form-label">商品名称</label>
+                            <input type="text" class="form-control" id="itemName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">详细描述</label>
+                            <textarea class="form-control" id="itemDesc" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">单价 (¥)</label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="itemPrice" value="0.00">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">库存数量</label>
+                                    <input type="number" min="0" class="form-control" id="itemStock" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">提交新增</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">当前系统内的数据列表</div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush" id="itemList">
+                        <li class="list-group-item text-muted">正在加载中...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
