@@ -1,11 +1,13 @@
+import os
 import asyncio
 import json
 import uuid
 from typing import Dict
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from workflow import ReliableAgentWorkflow
 
@@ -47,7 +49,7 @@ async def start_pipeline(req: RequirementCreate):
         "priority": req.priority,
         "stages": {}
     }
-    return {"message": "✅", "requirement_id": req_id}
+    return {"message": "�?, "requirement_id": req_id}
 
 @app.post("/api/v1/pipeline/{req_id}/stage/{stage_id}/audit")
 async def audit_stage(req_id: str, stage_id: str, payload: AuditAction):
@@ -71,7 +73,7 @@ async def execute_stage_stream(
     constraints: str = ""
 ):
     """
-    这里我们将直接挂载写好的抗灾多路由 SSE 生成管道！
+    这里我们将直接挂载写好的抗灾多路�?SSE 生成管道�?
     """
     if req_id not in FAKE_DB["requirements"]:
         if title:
@@ -84,6 +86,6 @@ async def execute_stage_stream(
             raise HTTPException(status_code=404, detail="REQ NOT FOUND")
     req_data = FAKE_DB["requirements"][req_id]
     
-    # 核心接入智能体容灾编排
+    # 核心接入智能体容灾编�?
     generator = agent_workflow.execute_stage_stream(req_id, stage_id, req_data, mock_error)
     return StreamingResponse(generator, media_type="text/event-stream")
