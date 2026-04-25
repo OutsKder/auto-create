@@ -1,5 +1,6 @@
 import os
 import json
+
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -10,6 +11,7 @@ llm_model = ChatOpenAI(
     api_key=os.getenv("DASHSCOPE_API_KEY"),
     streaming=True,
     max_tokens=1536
+
 )
 
 async def get_stage_prompt(stage_id: str, req_data: dict) -> str:

@@ -9,7 +9,6 @@ const codeInput = document.getElementById("codeInput");
 const codeFieldWrap = document.getElementById("codeFieldWrap");
 const sendCodeBtn = document.getElementById("sendCodeBtn");
 const rememberInput = document.getElementById("rememberInput");
-const quickFillBtn = document.getElementById("quickFillBtn");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
 const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 const loginFeedback = document.getElementById("loginFeedback");
@@ -42,7 +41,6 @@ syncAuthModeUI();
 function bindLoginEvents() {
   loginForm.addEventListener("submit", handleSubmit);
   loginForm.addEventListener("keydown", handleFormKeydown);
-  quickFillBtn.addEventListener("click", fillDemoAccount);
   if (authModeSwitch) {
     authModeSwitch.addEventListener("click", handleAuthModeChange);
   }
@@ -115,11 +113,10 @@ function syncAuthModeUI() {
     rememberInput.closest("label")?.classList.toggle("is-hidden", isRegister);
   }
 
-  quickFillBtn.textContent = isRegister ? "一键填充注册信息" : "一键填充演示账号";
   loginSubmitBtn.textContent = isRegister ? "注册并进入工作台" : "登录并进入工作台";
 }
 
-function handleSendCode() {
+async function handleSendCode() {
   clearFeedback();
   const email = emailInput.value.trim();
   if (!isValidEmail(email)) {
@@ -133,14 +130,14 @@ function handleSendCode() {
     return;
   }
 
-  const result = window.AuthSession.issueEmailCode(email);
+  const result = await window.AuthSession.issueEmailCode(email);
   if (!result || !result.ok) {
     setFeedback((result && result.message) || "验证码发送失败，请稍后重试。", "error");
     return;
   }
 
   startSendCodeCooldown(CODE_COOLDOWN_SECONDS);
-  setFeedback(`验证码已发送（演示验证码：${result.code}，5 分钟内有效）。`, "success");
+  setFeedback("验证码已发送到你的邮箱，请在 5 分钟内完成验证。", "success");
 }
 
 function startSendCodeCooldown(seconds) {
@@ -201,29 +198,6 @@ function resetCardTilt() {
   loginCard.style.setProperty("--tilt-y", "0");
 }
 
-function fillDemoAccount() {
-  if (authMode === "register") {
-    emailInput.value = "new.user@zhijie.engine";
-    passwordInput.value = "zhijie123";
-    if (codeInput) {
-      codeInput.value = "";
-    }
-    setFeedback("已填充注册信息，请发送验证码后完成注册。", "success");
-  } else {
-    emailInput.value = "demo@zhijie.engine";
-    passwordInput.value = "zhijie123";
-    setFeedback("已填充演示账号，可直接登录。", "success");
-  }
-
-  for (const wrap of fieldWraps) {
-    const input = wrap.querySelector("input");
-    if (!input) {
-      continue;
-    }
-    syncFieldFilledState(input, wrap);
-  }
-}
-
 function togglePasswordVisibility() {
   const show = passwordInput.type === "password";
   passwordInput.type = show ? "text" : "password";
@@ -271,7 +245,7 @@ function handleFormKeydown(event) {
   clearFeedback();
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event.preventDefault();
   clearFeedback();
 
@@ -301,7 +275,7 @@ function handleSubmit(event) {
   setSubmitting(true);
   setFeedback(authMode === "register" ? "正在校验验证码并创建账号..." : "正在校验账号凭证...", "success");
 
-  window.setTimeout(() => {
+  window.setTimeout(async () => {
     if (!window.AuthSession) {
       setSubmitting(false);
       setFeedback("认证服务不可用，请刷新重试。", "error");
@@ -309,24 +283,24 @@ function handleSubmit(event) {
     }
 
     if (authMode === "register") {
-      const registerResult = window.AuthSession.registerWithEmailCode({ email, password, code });
+      const registerResult = await window.AuthSession.registerWithEmailCode({ email, password, code });
       if (!registerResult || !registerResult.ok) {
         setSubmitting(false);
         setFeedback((registerResult && registerResult.message) || "注册失败，请稍后重试。", "error");
         return;
       }
 
-      window.AuthSession.createSession({ email }, { remember: false });
+      await window.AuthSession.createSession(registerResult.user, { remember: false });
       setFeedback("注册成功，正在进入织界工作台。", "success");
     } else {
-      const loginResult = window.AuthSession.loginWithPassword({ email, password });
+      const loginResult = await window.AuthSession.loginWithPassword({ email, password });
       if (!loginResult || !loginResult.ok) {
         setSubmitting(false);
         setFeedback((loginResult && loginResult.message) || "登录失败，请检查账号信息。", "error");
         return;
       }
 
-      window.AuthSession.createSession({ email }, { remember });
+      await window.AuthSession.createSession(loginResult.user, { remember });
       setFeedback("登录成功，正在进入织界工作台。", "success");
     }
 
