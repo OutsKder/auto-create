@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import uuid4
 
 from .checkpoint import Checkpoint, CheckpointStatus
@@ -22,6 +22,7 @@ class Pipeline:
     checkpoints: List[Checkpoint] = field(default_factory=list)
     current_stage_index: int = 0
     current_checkpoint_id: Optional[str] = None
+    context: Dict[str, Any] = field(default_factory=dict)  # 存储全流程上下文数据（需求、阶段结果等）
 
     @classmethod
     def create_default(cls) -> "Pipeline":

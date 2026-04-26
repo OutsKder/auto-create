@@ -12,6 +12,7 @@ from .service import (
     get_pipeline,
     get_checkpoint,
     list_pipelines,
+    run_agent_stages,
     reject,
     run_pipeline,
 )
@@ -21,6 +22,10 @@ app = FastAPI(title="Pipeline Scheduler API")
 
 class ActionRequest(BaseModel):
     note: str = ""
+
+class CreatePipelineRequest(BaseModel):
+    requirement_raw: str
+    context: Dict[str, Any] = {}
 
 
 def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
@@ -55,12 +60,15 @@ def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
         }
         if checkpoint
         else None,
+        "context": pipeline.context
     }
 
 
 @app.post("/pipelines")
-def post_pipelines() -> Dict[str, Any]:
-    pipeline = create_pipeline()
+def post_pipelines(req: CreatePipelineRequest) -> Dict[str, Any]:
+    context = req.context
+    context["requirement_raw"] = req.requirement_raw
+    pipeline = create_pipeline(context=context)
     return _pipeline_to_dict(pipeline)
 
 
@@ -82,6 +90,19 @@ def run_pipeline_api(pipeline_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="pipeline not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/pipelines/{pipeline_id}/run-agent-stages")
+def run_agent_stages_api(pipeline_id: str) -> Dict[str, Any]:
+    try:
+        pipeline = run_agent_stages(pipeline_id)
+        return _pipeline_to_dict(pipeline)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="pipeline not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.post("/pipelines/{pipeline_id}/auto-advance")

@@ -1,14 +1,32 @@
-from typing import Dict
+from typing import Any, Dict
 
 from .events import EventType
 from .pipeline import Pipeline, PipelineStatus
 from .checkpoint import Checkpoint
 
+try:
+    from agent.agents.requirement_analyst import RequirementAnalyst
+except ImportError:
+    from backend.agent.agents.requirement_analyst import RequirementAnalyst
+
+try:
+    # 复用已有的 ChatOpenAI 实例，保持与 test_requirement_analyst.py 一致的调用契约
+    from backend.doubao_llm import llm as default_llm
+except ImportError:
+    from doubao_llm import llm as default_llm
+
+# 初始化需求分析 Agent
+requirement_agent = RequirementAnalyst(llm_provider=default_llm)
+
+_AUTO_AGENT_STAGE_IDS = {"analysis"}
+
 _PIPELINES: Dict[str, Pipeline] = {}
 
 
-def create_pipeline() -> Pipeline:
+def create_pipeline(context: Dict[str, Any] = None) -> Pipeline:
     pipeline = Pipeline.create_default()
+    if context:
+        pipeline.context.update(context)
     _PIPELINES[pipeline.id] = pipeline
     return pipeline
 
@@ -32,7 +50,86 @@ def get_checkpoint(checkpoint_id: str) -> Checkpoint:
 def run_pipeline(pipeline_id: str) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
     pipeline.start()
+    # 自动执行已接入 agent 的阶段，直到遇到人工阶段
+    _run_auto_agent_stages(pipeline)
     return pipeline
+
+
+def run_agent_stages(pipeline_id: str) -> Pipeline:
+    """仅执行当前及后续已接入 agent 的阶段，遇到未接入阶段即停。"""
+    pipeline = get_pipeline(pipeline_id)
+
+    if pipeline.status == PipelineStatus.FINISHED:
+        return pipeline
+
+    if pipeline.status == PipelineStatus.CREATED:
+        pipeline.start()
+    elif pipeline.status == PipelineStatus.WAITING_APPROVAL:
+        checkpoint = pipeline.current_checkpoint()
+        if checkpoint is None:
+            raise ValueError("no active checkpoint")
+        pipeline.approve(checkpoint.id)
+
+    _run_auto_agent_stages(pipeline)
+    return pipeline
+
+
+def _run_auto_agent_stages(pipeline: Pipeline) -> None:
+    """循环执行已接入 agent 的阶段，直到遇到未接入阶段或流程结束。"""
+    safety_limit = max(len(pipeline.stages) * 2, 1)
+    steps = 0
+
+    while pipeline.status == PipelineStatus.RUNNING:
+        stage = pipeline.current_stage()
+        if stage is None:
+            pipeline.status = PipelineStatus.FINISHED
+            return
+        if stage.id not in _AUTO_AGENT_STAGE_IDS:
+            return
+
+        steps += 1
+        if steps > safety_limit:
+            raise RuntimeError("auto agent stage execution exceeded safety limit")
+
+        progressed = _execute_current_stage_agent(pipeline)
+        if not progressed:
+            return
+
+
+def _execute_current_stage_agent(pipeline: Pipeline) -> bool:
+    """执行当前阶段对应的Agent，将结果存入上下文"""
+    current_stage = pipeline.current_stage()
+    if not current_stage:
+        return False
+
+    if current_stage.id == "analysis":
+        requirement_raw = (pipeline.context.get("requirement_raw") or "").strip()
+        # 兼容旧调用方：缺失原始需求时不触发分析 Agent，保留在 analysis 阶段等待外部补充
+        if not requirement_raw:
+            return False
+
+        # 需求分析阶段，调用需求分析 Agent
+        result = requirement_agent.execute(pipeline.context)
+
+        if not isinstance(result, dict):
+            raise RuntimeError("RequirementAnalyst 返回格式错误，期望 Dict")
+
+        # 将增量结果 merge 回全局上下文（包含 requirement_structured/meta_trace）
+        pipeline.context.update(result)
+
+        # 更新阶段状态为完成
+        current_stage.mark_done()
+        # 自动推进到下一个阶段（analysis 当前按无人工审核处理）
+        pipeline.current_stage_index += 1
+        next_stage = pipeline.current_stage()
+        if next_stage:
+            next_stage.start()
+            pipeline.status = PipelineStatus.RUNNING
+        else:
+            pipeline.status = PipelineStatus.FINISHED
+        return True
+
+    return False
 
 
 def stage_done(pipeline_id: str) -> Pipeline:
@@ -74,6 +171,9 @@ def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
             raise RuntimeError("auto advance exceeded safety limit")
 
         if pipeline.status == PipelineStatus.RUNNING:
+            _run_auto_agent_stages(pipeline)
+            if pipeline.status != PipelineStatus.RUNNING:
+                continue
             pipeline.stage_done()
             continue
 
@@ -97,6 +197,7 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
 
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
+        _run_auto_agent_stages(pipeline)
         return pipeline
 
     if pipeline.status == PipelineStatus.WAITING_APPROVAL:
@@ -104,14 +205,21 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
         if checkpoint is None:
             raise ValueError("no active checkpoint")
         pipeline.approve(checkpoint.id)
+        _run_auto_agent_stages(pipeline)
         return pipeline
 
     if pipeline.status == PipelineStatus.RUNNING:
+        stage = pipeline.current_stage()
+        if stage and stage.id in _AUTO_AGENT_STAGE_IDS:
+            _run_auto_agent_stages(pipeline)
+            return pipeline
+
         pipeline.stage_done()
         checkpoint = pipeline.current_checkpoint()
         if checkpoint is None:
             raise ValueError("no active checkpoint")
         pipeline.approve(checkpoint.id)
+        _run_auto_agent_stages(pipeline)
         return pipeline
 
     return pipeline
