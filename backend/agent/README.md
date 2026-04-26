@@ -2,92 +2,250 @@
 
 本目录包含了 DevFlow 研发全流程引擎的 **AI 执行内核 (Execution Kernel)**。Agent 模块不负责流程的流转、状态机的维护和任务的调度，而是作为高度封装的黑盒任务处理器，基于外层 Pipeline 传入的上下文 (`context`) 完成单节点的专业领域任务，并输出结构化的增量数据。
 
-## 一、技术架构设计
+---
 
-1. **统一的接口契约 (`BaseAgent`)**
-   所有维度的 Agent（如需求分析、方案设计、代码生成、测试开发、代码评审）均继承自 `BaseAgent` 抽象类，对外只暴露一个标准且一致的接口：`execute(context: Dict) -> Dict`。
-2. **大模型解耦与依赖注入 (LLM Provider Injection)**
-   Agent 内部代码绝对不绑定抖音、阿里、OpenAI 等特定厂商的特有 SDK。而是依赖注入遵循 LangChain 标准协议的 `BaseChatModel`。只需在外层改变 `llm_provider` 的实例，即可实现千问、豆包等模型的零代码改造切换。
-3. **确定性的结构输出 (Structured Output via Pydantic)**
-   传统的 LLM 具有高度不确定性。为了在工程流水线中做到 100% 数据接住，Agent 的输出契约全部通过 `pydantic.BaseModel` 定义。配合强指令（Format Instructions）保证模型输出跨节点数据流转时的极其确定性。
+## 一、目录结构
 
-## 二、系统核心技术亮点
+```
+backend/agent/
+├── __init__.py                    # 包导出入口
+├── base.py                        # BaseAgent 抽象基类 & AgentConfig
+├── callbacks.py                    # TraceCallbackHandler 链路追踪组件
+├── agents/                        # 核心 Agent 实现
+│   ├── __init__.py
+│   ├── requirement_analyst.py     # 需求分析 Agent
+│   └── ...                        # 后续扩展：tech_architect, code_generator, etc.
+├── prompts/                       # Prompt 模板管理
+│   ├── __init__.py
+│   ├── manager.py                 # PromptManager 模板管理器
+│   ├── common.py                  # 通用 Prompt (重试、纠错等)
+│   ├── requirement_analyst.py     # 需求分析 Agent 专属 Prompt
+│   └── templates/                 # 模板文件目录(预留)
+│       └── requirement_analyst/
+│           ├── system.txt
+│           ├── context.txt
+│           └── output_schema.json
+├── llm/                           # LLM Provider 实现
+│   ├── __init__.py
+│   ├── base.py                    # BaseLLMProvider 抽象接口
+│   ├── factory.py                 # LLMFactory 工厂类
+│   └── providers/                 # 各 Provider 实现
+│       ├── __init__.py
+│       ├── doubao.py              # 字节豆包
+│       ├── qwen.py                # 阿里通义千问
+│       └── openai_compatible.py   # OpenAI 兼容
+└── utils/                         # 工具函数
+    ├── __init__.py
+    ├── code_parser.py             # 代码解析工具
+    └── output_parser.py           # 输出解析工具
+```
 
-目前的 Agent 模块（以 `RequirementAnalyst` 为例）引入了极具工业级竞争力的强悍特性：
+---
 
-- **人机协同与专业追问 (Human-in-the-Loop & Clarification)**
-  不仅把自然语言“翻译”成需求，更引入了一套宽容但有底线的评估体系。当输入的需求严重模糊或缺失业务闭环时，Agent 会将其判定为不可用 (`is_clear=False`)并自动挂起流程，提出 1-3 个选择性启发问题（`clarifying_questions`）向用户索取信息。在此过程中，Agent 会基于同理心和行业常识，尽可能为缺少细则的小白用户补全业务闭环。
-- **全景可观测性链路追踪 (Trace & Token Logging)**
-  在底层大模型交互中，我们通过自定义 `TraceCallbackHandler` 实现了极致的可观测性。不仅支持了打字机般的流式输出体验，还隐式构建了全链路数据埋点。每次调用所消耗的时间、精准的 Token 数量（包括 Prompt 和 Completion，并附带针对流式调用的“三重跌落兜底”计算机制）以及出入参快照（`prompts_snapshot`、`completion_snapshot`）均被完整捕获并打包在 `meta_trace` 中，供上层流水线溯源、核算成本或在前端仪表盘展示。
-- **隔离的 Prompt 管理架构 (Prompt Decoupling)**
-  将以往硬编码在 Python 逻辑中的长篇系统设定与提示词彻底剥离，统一收敛至 `backend/agent/prompt/` 目录下（如 `requirement_analyst_prompt.py`、`common_prompt.py`）。这种高内聚低耦合的模型隔离感，使得团队中的 Prompt Engineer 能够安全、独立地进行提示词调优，而无需担忧破坏核心业务逻辑。
-- **自动纠错与重试容错 (Self-Healing / Retry Parsing)**
-  大模型偶尔会输出非法的 JSON（例如漏掉括号或添加了 Markdown 标识），这在传统的流水线中会导致灾难性崩溃。我们在底层实现了一套原生的**重试自愈机制**。当 Pydantic 解析异常时，自动触发重试流程：将【格式要求】、【出错的字符串】与【错误异常栈】反哺给 LLM 勒令其自行修复，极大地提升了系统的存活率与鲁棒性。
-- **防提示词注入隔离 (Prompt Injection Guardrails)**
-  面对不可信的外部输入信息，在底层架构引入 XML Style 或显式区间的包裹(`<user_input>`)，结合强硬的系统级隔离声明，抵御针对后续 DevOps 和代码层面的恶意 Prompt Attack。
-- **动态防爆限流体系 (Token Limits & OOM Protection)**
-  借助 `tiktoken`（或降级字数计算）在真正发入 LLM 前进行 Tokens 预估测算。当输入字符串超出安全阈值（如 `10000` Tokens）时，直接从业务层阻断请求并抛出清晰的错误提示，彻底防止天价账单和 OOM 崩溃。
+## 二、核心架构设计
 
-## 三、与 Pipeline 引擎的对接方式及优势
+### 2.1 统一的接口契约 (BaseAgent)
 
-在外层使用 StateMachine (状态机) 或 LangGraph 等 Pipeline 引擎时，与当前 Agent 的交互极其简单，呈现出极强的数据流式处理能力：
+所有 Agent 均继承自 `BaseAgent` 抽象类，对外只暴露一个标准接口：
 
 ```python
-from agent.requirement_analyst import RequirementAnalyst
-# 假设 llm 是一个全局或工厂创建的 LangChain ChatModel 实例，开启了 streaming=True
-from doubao_llm import llm
+from agent import RequirementAnalyst
 
-# 1. 在 Pipeline 的某个 Stage 处实例化对应的执行 Agent
 analyst = RequirementAnalyst(llm_provider=llm)
 
-# 2. Pipeline 提供并组织当前时刻的全局参数
-current_context = {
+result = analyst.execute({
     "requirement_raw": "我要做一个类似微信的软件"
+})
+
+# result 包含:
+# - requirement_structured: 结构化需求数据
+# - meta_trace: 链路追踪元数据
+```
+
+### 2.2 大模型解耦与依赖注入
+
+Agent 内部代码不绑定任何特定厂商 SDK，通过注入的 `llm_provider` 实现零代码切换：
+
+```python
+# 支持的 Provider
+- Doubao (字节豆包)
+- Qwen (通义千问)
+- OpenAI Compatible (其他兼容模型)
+```
+
+### 2.3 确定性的结构输出
+
+Agent 输出全部通过 Pydantic Model 定义，配合 LLM Structured Output 确保跨节点数据流转的确定性。
+
+---
+
+## 三、核心 Agent 详解
+
+### 3.1 需求分析 Agent (Requirement Analyst)
+
+**角色定位**：资深产品经理
+
+**输入输出**：
+
+| 阶段 | 输入 | 输出 |
+|------|------|------|
+| 需求分析 | `requirement_raw` | `requirement_structured` |
+
+**输出结构 (RequirementStructured)**：
+
+```python
+{
+    "is_clear": bool,                    # 需求是否清晰
+    "clarifying_questions": [str],       # 澄清问题（当 is_clear=False 时）
+    "goal": str,                         # 核心目标
+    "features": [str],                   # 功能点列表
+    "constraints": [str],                # 非功能约束
+    "acceptance_criteria": [str]          # 验收标准
 }
+```
 
-# 3. 将上下文传入 Agent 执行
-# 这里 Agent 内部会触发 Trace 回调，实现流式输出并捕获元数据
-result = analyst.execute(current_context)
+**执行流程**：
 
-# 4. Pipeline 根据 Agent 的标准契约决定系统流转状态
+```
+输入校验
+    ↓
+极端短输入拦截 (< 5 字符)
+    ↓
+Token 数量防爆检测 (> 10000 则拒绝)
+    ↓
+LLM 调用生成结构化需求
+    ↓
+JSON 解析
+    ↓ [解析失败]
+重试自愈机制
+    ↓
+返回增量 context + meta_trace
+```
+
+---
+
+## 四、工业级特性
+
+### 4.1 人机协同与专业追问 (Human-in-the-Loop)
+
+当输入需求严重模糊时，Agent 会：
+1. 判定 `is_clear=False`
+2. 自动生成 1-3 个选择性启发问题
+3. 挂起流程等待用户补充
+
+### 4.2 全景可观测性链路追踪 (Trace & Token Logging)
+
+通过 `TraceCallbackHandler` 实现：
+- 流式打字机效果输出
+- 精准 Token 数量统计
+- 全链路耗时记录
+- 出入参快照捕获
+
+### 4.3 隔离的 Prompt 管理架构
+
+Prompt 模板与代码完全解耦：
+- `prompts/common.py` - 通用模板（重试、纠错）
+- `prompts/requirement_analyst.py` - 专属模板
+- `prompts/templates/` - 文件模板（可选）
+
+### 4.4 自动纠错与重试容错 (Self-Healing)
+
+当 JSON 解析失败时，自动触发重试流程：
+1. 捕获解析异常
+2. 将错误信息 + 原始输出反馈给 LLM
+3. 引导模型自我修正
+4. 重新解析验证
+
+### 4.5 防提示词注入 (Prompt Injection Guardrails)
+
+通过 XML Style 包裹用户输入，防止恶意指令注入：
+```
+<user_input>
+{requirement_raw}
+</user_input>
+```
+
+### 4.6 动态防爆限流 (Token Limits & OOM Protection)
+
+- 使用 `tiktoken` 精确计算 Token 数量
+- 超过 10000 Token 直接拒绝
+- 防止天价账单和 OOM 崩溃
+
+---
+
+## 五、与 Pipeline 引擎对接
+
+```python
+from agent import RequirementAnalyst
+
+analyst = RequirementAnalyst(llm_provider=llm)
+context = {"requirement_raw": "我要做一个类似微信的软件"}
+
+result = analyst.execute(context)
+
 req_data = result.get("requirement_structured", {})
 trace_data = result.get("meta_trace", {})
 
-# 可以将 trace_data 落库，用于在前端面板展示该节点的 Token 消耗和耗时
-save_to_db(trace_data)
-
 if not req_data.get("is_clear"):
-    # 【高光时刻：多次追问挂起】Pipeline 将状态设为 WAITING_INPUT / PENDING_USER
-    # 并将澄清问题推送给前端，等待用户补充后再重新执行本阶段
+    # 流程暂停，等待用户补充澄清问题
     pipeline.pause_and_ask_user(req_data.get("clarifying_questions"))
 else:
-    # 成功处理，将此阶段的结构化高价值增量更新汇入主数据总线，放行进入下一 Stage
-    current_context.update(result)
+    # 成功处理，进入下一阶段
+    context.update(result)
     pipeline.next_stage("tech_architect")
 ```
 
-**这种对接方式的设计优势：**
+**对接优势**：
+1. 职责边界极致清晰 - Agent 纯粹作为智力单元
+2. 应对不确定性的"降维打击" - LLM 输出强制转换为可编程的 dict
+3. 天然拥抱工作流扩展 - 新增 Agent 只需继承 BaseAgent
 
-1. **职责边界极致清晰**：Agent 层纯粹作为算力与智力单元（接收信息 -> 施加 Prompt 智能加工 -> 产出标准化积木块），绝不关心流程流到了哪一步，保证了单元的可替换性和极简的单元测试。
-2. **应对不确定性的“降维打击”**：把大语言模型的“自由发散”强制压缩成可编程的 `dict/JSON` 和 `is_clear` 状态标。外部 Pipeline 看 LLM 不再是一个黑盒的对话框，而是一个有着明确布尔出口和预构体接口的**微服务模块**。
-3. **天然拥抱工作流扩展**：当产研工作流需要增加 `UI Designer` 节点时，只需新建继承 `BaseAgent` 的类，配置相应的输入输出 Schema，然后插入 Pipeline 的列表数组中即可，核心架构无需伤筋动骨。
+---
 
-## 四、后续 Agent 可继承的沉淀资产
+## 六、后续扩展资产
 
-这套 `RequirementAnalyst` 所跑通的基础工程设施，将成为后续所有研发节点 Agent（如 `Tech Architect`, `Coder Agent`, `Reviewer`）可直接无缝继承的庞大资产池：
+已完成的基础工程设施可供后续 Agent 无缝复用：
 
-1. **`callbacks.py` -> 链路追踪组件**：所有后续 Agent 在使用 `invoke` 时挂载 `TraceCallbackHandler`，免费获得流式打印、耗时记录和精准 Tokens 结算的监控面板，保证整个流水线全程透明可见。
-2. **`common_prompt.py` -> 纠错自愈兜底基石**：Tech Architect 生产表结构 JSON、Coder 生成文件层级 JSON 时，如果发生解析撕裂，直接引用 `JSON_RETRY_SYSTEM_PROMPT` 唤起自愈程序。
-3. **Pydantic 结构化卡口范式**：后续 Agent 只需撰写自身的 `XxxStructured(BaseModel)`，并复用底层 `try-except` 包裹的 `self.parser.parse()` 逻辑，就能像工厂流水线模具一样，把模糊的响应压断并强转成字典对象装车推给下一环。
-4. **统一的大模型实例桥接方案**：基于 LangChain `ChatOpenAI` 桥接统一封装的模型实例入口，后续所有的 Agent 都不用再重新实现发包逻辑或对接各类国产/开源大模型的 HTTP 请求协议。
+| 组件 | 复用方式 |
+|------|----------|
+| `callbacks.py` | 所有 Agent 使用 `TraceCallbackHandler` 获得监控能力 |
+| `prompts/common.py` | JSON 解析失败时复用 `JSON_RETRY_*` 模板 |
+| `base.py` | 新 Agent 继承 `BaseAgent` 获得标准接口 |
+| Pydantic 结构化输出 | 定义 `XxxStructured(BaseModel)` 即可复用解析逻辑 |
 
-## 四、运行与测试
+---
 
-通过以下指令执行专门针对“需求分析 Agent”构建的测试用例：
-测试包含了正常复杂需求的【高分拆解能力】与垃圾模糊需求的【追问拦截与格式自愈能力】。
+## 七、运行与测试
 
 ```bash
-python backend/test_requirement_analyst.py
+python -m backend.agent.agents.requirement_analyst
 ```
 
-_(运行前请确保当前 Python 环境变量中已安装 `langchain`, `langchain-core` 以及 `pydantic`，且通过 `doubao_llm.py` 配置好了可用的大模型秘钥 / API endpoint)。_
+或创建测试文件：
+
+```python
+# test_requirement_analyst.py
+from agent import RequirementAnalyst
+from doubao_llm import llm
+
+analyst = RequirementAnalyst(llm_provider=llm)
+
+# 正常需求
+result = analyst.execute({"requirement_raw": "我要做一个记账软件，支持收入支出分类和月度报表"})
+print(result)
+
+# 模糊需求（触发追问）
+result = analyst.execute({"requirement_raw": "微信"})
+print(result)
+```
+
+---
+
+## 八、依赖项
+
+```
+langchain>=0.1.0
+langchain-core>=0.1.0
+pydantic>=2.0.0
+tiktoken>=0.5.0  # 可选，用于精确 Token 计算
+```
