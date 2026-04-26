@@ -1,0 +1,52 @@
+@baseUrl = http://127.0.0.1:8002
+@pipelineId = 28daed7f-9768-41aa-9510-314c379bf1c4
+@checkpointId = replace-with-checkpoint-id
+
+### 创建 Pipeline
+POST {{baseUrl}}/pipelines
+Content-Type: application/json
+
+{}
+
+### 列出所有 Pipelines
+GET {{baseUrl}}/pipelines
+
+### 启动 Pipeline
+POST {{baseUrl}}/pipelines/{{pipelineId}}/run
+Content-Type: application/json
+
+{}
+
+### 自动推进到结束（无 agent）
+POST {{baseUrl}}/pipelines/{{pipelineId}}/auto-advance
+Content-Type: application/json
+
+{}
+
+### 单步推进一个 Stage（无 agent）
+POST {{baseUrl}}/pipelines/{{pipelineId}}/advance-one-stage
+Content-Type: application/json
+
+{}
+
+### 查询 Pipeline 状态
+GET {{baseUrl}}/pipelines/{{pipelineId}}
+
+### 查询当前 Stage
+GET {{baseUrl}}/pipelines/{{pipelineId}}/current-stage
+
+### Approve Checkpoint
+POST {{baseUrl}}/checkpoints/{{checkpointId}}/approve
+Content-Type: application/json
+
+{
+	"note": "approved from http file"
+}
+
+### Reject Checkpoint
+POST {{baseUrl}}/checkpoints/{{checkpointId}}/reject
+Content-Type: application/json
+
+{
+	"note": "rejected from http file"
+}
