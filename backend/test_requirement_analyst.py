@@ -5,7 +5,7 @@ import json
 # 确保能导入 backend 下的模块
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.agent import RequirementAnalyst
+from backend.agent import RequirementAnalyst, TechArchitect
 from backend.doubao_llm import llm as doubao_llm
 
 
@@ -122,5 +122,61 @@ def test_requirement_analyst():
         traceback.print_exc()
 
 
+def test_full_flow():
+    """测试完整流程：需求分析 -> 方案设计"""
+    print("\n\n====== 开始运行完整流程测试 ======\n")
+
+    # 初始化两个 Agent
+    analyst = RequirementAnalyst(llm_provider=doubao_llm)
+    architect = TechArchitect(llm_provider=doubao_llm)
+
+    # 测试需求
+    test_context = {
+        "requirement_raw": "我需要为现有的计算器应用添加乘法和除法功能，并且要支持浮点数运算。"
+    }
+
+    print("=== 1. 需求分析阶段 ===")
+    print(f"输入需求: {test_context['requirement_raw']}")
+
+    # 执行需求分析
+    analyst_result = analyst.execute(test_context)
+    print("\n需求分析完成，结果:")
+    print(json.dumps(analyst_result, ensure_ascii=False, indent=2))
+
+    # 验证需求分析结果
+    assert (
+        "requirement_structured" in analyst_result
+    ), "需求分析缺少 requirement_structured"
+    requirement_structured = analyst_result["requirement_structured"]
+
+    print("\n=== 2. 方案设计阶段 ===")
+    # 构建方案设计的输入
+    design_context = {"requirement_structured": requirement_structured}
+
+    # 执行方案设计
+    design_result = architect.execute(design_context)
+    print("\n方案设计完成，结果:")
+    print(json.dumps(design_result, ensure_ascii=False, indent=2))
+
+    # 验证方案设计结果
+    assert "design" in design_result, "方案设计缺少 design"
+    design_data = design_result["design"]
+    assert "architecture" in design_data, "方案设计缺少 architecture"
+    assert "api_design" in design_data, "方案设计缺少 api_design"
+    assert "file_change_plan" in design_data, "方案设计缺少 file_change_plan"
+    assert "risk_analysis" in design_data, "方案设计缺少 risk_analysis"
+
+    print("\n=== 3. 结果验证 ===")
+    print(f"架构设计: {design_data['architecture'][:100]}...")
+    print(f"API 设计: {design_data['api_design'][:100]}...")
+    print(f"文件变更计划: {len(design_data['file_change_plan'])} 项")
+    for item in design_data["file_change_plan"]:
+        print(f"  - {item['change_type']}: {item['file_path']}")
+    print(f"风险分析: {design_data['risk_analysis'][:100]}...")
+
+    print("\n✅ 完整流程测试通过!")
+
+
 if __name__ == "__main__":
     test_requirement_analyst()
+    # test_full_flow()
