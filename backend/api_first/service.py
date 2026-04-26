@@ -116,17 +116,6 @@ def _execute_current_stage_agent(pipeline: Pipeline) -> bool:
 
         # 将增量结果 merge 回全局上下文（包含 requirement_structured/meta_trace）
         pipeline.context.update(result)
-
-        # 更新阶段状态为完成
-        current_stage.mark_done()
-        # 自动推进到下一个阶段（analysis 当前按无人工审核处理）
-        pipeline.current_stage_index += 1
-        next_stage = pipeline.current_stage()
-        if next_stage:
-            next_stage.start()
-            pipeline.status = PipelineStatus.RUNNING
-        else:
-            pipeline.status = PipelineStatus.FINISHED
         return True
 
     return False
@@ -195,32 +184,42 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
     if pipeline.status == PipelineStatus.FINISHED:
         return pipeline
 
+    original_index = pipeline.current_stage_index
+
+    # 处理初始状态和待审核状态，先进入运行状态
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
-        _run_auto_agent_stages(pipeline)
-        return pipeline
-
-    if pipeline.status == PipelineStatus.WAITING_APPROVAL:
+    elif pipeline.status == PipelineStatus.WAITING_APPROVAL:
         checkpoint = pipeline.current_checkpoint()
         if checkpoint is None:
             raise ValueError("no active checkpoint")
         pipeline.approve(checkpoint.id)
-        _run_auto_agent_stages(pipeline)
+
+    # ========= 绝对保证：每次只处理当前一个阶段，不管有没有Agent =========
+    current_stage = pipeline.current_stage()
+    if not current_stage:
+        pipeline.status = PipelineStatus.FINISHED
         return pipeline
 
-    if pipeline.status == PipelineStatus.RUNNING:
-        stage = pipeline.current_stage()
-        if stage and stage.id in _AUTO_AGENT_STAGE_IDS:
-            _run_auto_agent_stages(pipeline)
-            return pipeline
-
-        pipeline.stage_done()
-        checkpoint = pipeline.current_checkpoint()
-        if checkpoint is None:
-            raise ValueError("no active checkpoint")
-        pipeline.approve(checkpoint.id)
-        _run_auto_agent_stages(pipeline)
-        return pipeline
+    # 1. 处理当前阶段逻辑：有Agent就执行，没有就直接跳过
+    if current_stage.id in _AUTO_AGENT_STAGE_IDS:
+        _execute_current_stage_agent(pipeline)
+    
+    # 2. 统一完成当前阶段的收尾流程（不管有没有Agent都走）
+    current_stage.mark_done()
+    # 生成审核节点并自动通过
+    pipeline.checkpoint_for_current_stage()
+    checkpoint = pipeline.current_checkpoint()
+    pipeline.approve(checkpoint.id)
+    
+    # 3. 强制只推进一次，绝对不会加两次
+    pipeline.current_stage_index = original_index + 1
+    next_stage = pipeline.current_stage()
+    if next_stage:
+        next_stage.start()
+        pipeline.status = PipelineStatus.RUNNING
+    else:
+        pipeline.status = PipelineStatus.FINISHED
 
     return pipeline
 

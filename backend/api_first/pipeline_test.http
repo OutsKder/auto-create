@@ -1,5 +1,5 @@
 @baseUrl = http://127.0.0.1:8002
-@pipelineId = 6d649347-f2b5-4695-bf74-d50b89764811
+@pipelineId = 2db4e106-af42-48eb-95c2-351175b09e1d
 @checkpointId = replace-with-checkpoint-id
 
 ### 创建 Pipeline
@@ -19,11 +19,7 @@ Content-Type: application/json
 
 {}
 
-### 仅执行已接入 Agent 的阶段（推荐逐步测试时使用）
-POST {{baseUrl}}/pipelines/{{pipelineId}}/run-agent-stages
-Content-Type: application/json
 
-{}
 
 ### 自动推进到结束（已接入 agent 的阶段会自动执行，其余阶段走审批流）
 POST {{baseUrl}}/pipelines/{{pipelineId}}/auto-advance

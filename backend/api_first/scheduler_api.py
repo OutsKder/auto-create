@@ -92,17 +92,7 @@ def run_pipeline_api(pipeline_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/pipelines/{pipeline_id}/run-agent-stages")
-def run_agent_stages_api(pipeline_id: str) -> Dict[str, Any]:
-    try:
-        pipeline = run_agent_stages(pipeline_id)
-        return _pipeline_to_dict(pipeline)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="pipeline not found") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
 
 
 @app.post("/pipelines/{pipeline_id}/auto-advance")
@@ -122,6 +112,17 @@ def auto_advance_pipeline_api(pipeline_id: str) -> Dict[str, Any]:
 def advance_one_stage_api(pipeline_id: str) -> Dict[str, Any]:
     try:
         pipeline = advance_one_stage(pipeline_id)
+        return _pipeline_to_dict(pipeline)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="pipeline not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/pipelines/{pipeline_id}/reject")
+def reject_stage_api(pipeline_id: str, req: ActionRequest) -> Dict[str, Any]:
+    try:
+        pipeline = reject(pipeline_id)
         return _pipeline_to_dict(pipeline)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="pipeline not found") from exc
