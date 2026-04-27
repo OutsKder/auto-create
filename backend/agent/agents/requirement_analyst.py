@@ -113,10 +113,13 @@ class RequirementAnalyst(BaseAgent):
     def _count_tokens(self, text: str) -> int:
         """计算 Token 数量"""
         try:
+            # 尝试使用 tiktoken 进行精确的 token 计算
             import tiktoken
+            # 使用 cl100k_base 编码器，这是 LLM 通常使用的编码器
             encoding = tiktoken.get_encoding("cl100k_base")
             return len(encoding.encode(text))
         except ImportError:
+            # 如果 tiktoken 未安装，则退化为按字符长度估算
             return len(text)
 
     def _invoke_llm(
@@ -132,15 +135,22 @@ class RequirementAnalyst(BaseAgent):
             ]
         )
 
+        # 构建 LLM 输入，注入原始需求和输出格式要求
         _input = prompt.format_prompt(
+            # 注入原始需求
             requirement_raw=requirement_raw,
+            # 注入输出格式要求
             format_instructions=self.parser.get_format_instructions(),
         )
 
-        response = self.llm.invoke(_input, config={"callbacks": [tracer]})
+        response = self.llm.invoke(_input, config={"callbacks": [tracer]}) # 调用 LLM 并记录 trace
         tracer.print_trace_report()
         return response
 
+    # 解析 LLM 响应，失败时触发重试
+    # 解析失败时触发重试自愈
+    # 解析成功后返回结构化需求
+    # 解析失败后返回重试结果
     def _parse_response(
         self,
         response: Any,

@@ -1,5 +1,5 @@
 from .base import BaseAgent, AgentConfig
-from .agents import RequirementAnalyst, RequirementStructured
+from .agents import RequirementAnalyst, RequirementStructured, TechArchitect, Design
 from .callbacks import TraceCallbackHandler
 from .prompts.manager import PromptManager
 from .llm import BaseLLMProvider, LLMConfig, LLMFactory
@@ -11,6 +11,8 @@ __all__ = [
     "AgentConfig",
     "RequirementAnalyst",
     "RequirementStructured",
+    "TechArchitect",
+    "Design",
     "TraceCallbackHandler",
     "PromptManager",
     # LLM Provider
