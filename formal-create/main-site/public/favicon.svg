@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0A0A0F"/>
+  <path d="M14 22c8-9.2 21.8-10.6 32-3.2" stroke="url(#a)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M13 32.4c7.8-7.1 18.8-8.4 27.8-3.2 3.6 2 6.2 4.9 10.2 11.6" stroke="url(#b)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M16.4 44.8c11 7 23.8 5 33.4-5.4" stroke="url(#c)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="8.4" fill="url(#d)"/>
+  <circle cx="32" cy="32" r="3.1" fill="white" fill-opacity=".92"/>
+  <circle cx="14" cy="22" r="3.6" fill="#93B2FF"/>
+  <circle cx="51" cy="40.8" r="3.6" fill="#8B5CF6"/>
+  <defs>
+    <linearGradient id="a" x1="14" y1="22" x2="46" y2="18.8"><stop stop-color="#EAF0FF"/><stop offset=".48" stop-color="#93B2FF"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient>
+    <linearGradient id="b" x1="13" y1="32.4" x2="51" y2="40.8"><stop stop-color="#22D3EE"/><stop offset=".55" stop-color="#6087FF"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+    <linearGradient id="c" x1="16.4" y1="44.8" x2="49.8" y2="39.4"><stop stop-color="#DCE6FF"/><stop offset=".5" stop-color="#3B5FFF"/><stop offset="1" stop-color="#EC4899"/></linearGradient>
+    <radialGradient id="d" cx="0" cy="0" r="1" gradientTransform="translate(28.8 28.4) rotate(47.7) scale(17)"><stop stop-color="white"/><stop offset=".33" stop-color="#93B2FF"/><stop offset=".72" stop-color="#3B5FFF"/><stop offset="1" stop-color="#8B5CF6"/></radialGradient>
+  </defs>
+</svg>
