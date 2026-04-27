@@ -65,17 +65,17 @@ def run_agent_stages(pipeline_id: str) -> Pipeline:
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
     elif pipeline.status == PipelineStatus.WAITING_APPROVAL:
-        checkpoint = pipeline.current_checkpoint()
-        if checkpoint is None:
-            raise ValueError("no active checkpoint")
-        pipeline.approve(checkpoint.id)
+        # 禁止自动 approve，等待用户通过API调用审批
+        return pipeline
 
     _run_auto_agent_stages(pipeline)
     return pipeline
 
 
+import time
+
 def _run_auto_agent_stages(pipeline: Pipeline) -> None:
-    """循环执行已接入 agent 的阶段，直到遇到未接入阶段或流程结束。"""
+    """循环执行所有阶段，有Agent的执行Agent，无Agent的模拟执行，完成后自动进入审批。"""
     safety_limit = max(len(pipeline.stages) * 2, 1)
     steps = 0
 
@@ -84,16 +84,24 @@ def _run_auto_agent_stages(pipeline: Pipeline) -> None:
         if stage is None:
             pipeline.status = PipelineStatus.FINISHED
             return
-        if stage.id not in _AUTO_AGENT_STAGE_IDS:
-            return
 
         steps += 1
         if steps > safety_limit:
             raise RuntimeError("auto agent stage execution exceeded safety limit")
 
-        progressed = _execute_current_stage_agent(pipeline)
-        if not progressed:
-            return
+        if stage.id in _AUTO_AGENT_STAGE_IDS:
+            # 有Agent的阶段执行Agent逻辑
+            progressed = _execute_current_stage_agent(pipeline)
+            if not progressed:
+                return
+        else:
+            # 无Agent的阶段：模拟执行（sleep3秒，以后你可以在这里嵌入真实的阶段处理逻辑）
+            print(f"模拟执行阶段: {stage.name} (id: {stage.id})，3秒后自动完成...")
+            time.sleep(3)
+            print(f"阶段 {stage.name} 模拟执行完成")
+        
+        # 所有阶段执行完成后自动标记完成，进入审批状态
+        stage_done(pipeline.id)
 
 
 def _execute_current_stage_agent(pipeline: Pipeline) -> bool:
@@ -139,13 +147,14 @@ def approve(pipeline_id: str, checkpoint_id: str | None = None) -> Pipeline:
     return pipeline
 
 
-def reject(pipeline_id: str, checkpoint_id: str | None = None) -> Pipeline:
+def reject(pipeline_id: str, checkpoint_id: str | None = None, note: str = "") -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
-    pipeline.reject(checkpoint_id=checkpoint_id)
+    pipeline.reject(checkpoint_id=checkpoint_id, note=note)
     return pipeline
 
 
 def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
+    # 已废弃，建议使用审批驱动流程
     pipeline = get_pipeline(pipeline_id)
 
     if pipeline.status == PipelineStatus.CREATED:
@@ -167,11 +176,8 @@ def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
             continue
 
         if pipeline.status == PipelineStatus.WAITING_APPROVAL:
-            checkpoint = pipeline.current_checkpoint()
-            if checkpoint is None:
-                raise ValueError("no active checkpoint")
-            pipeline.approve(checkpoint.id)
-            continue
+            # 禁止自动 approve，等待用户通过API调用审批
+            break
 
         break
 
@@ -179,47 +185,38 @@ def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
 
 
 def advance_one_stage(pipeline_id: str) -> Pipeline:
+    """内部调试工具：仅用于调试，不对外暴露API。自动推进一个阶段并自动审批。"""
     pipeline = get_pipeline(pipeline_id)
 
     if pipeline.status == PipelineStatus.FINISHED:
         return pipeline
 
-    original_index = pipeline.current_stage_index
-
-    # 处理初始状态和待审核状态，先进入运行状态
+    # 处理初始状态，先启动
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
     elif pipeline.status == PipelineStatus.WAITING_APPROVAL:
+        # 调试模式：自动审批当前checkpoint
         checkpoint = pipeline.current_checkpoint()
         if checkpoint is None:
             raise ValueError("no active checkpoint")
         pipeline.approve(checkpoint.id)
 
-    # ========= 绝对保证：每次只处理当前一个阶段，不管有没有Agent =========
     current_stage = pipeline.current_stage()
     if not current_stage:
         pipeline.status = PipelineStatus.FINISHED
         return pipeline
 
-    # 1. 处理当前阶段逻辑：有Agent就执行，没有就直接跳过
+    # 处理当前阶段逻辑：有Agent就执行
     if current_stage.id in _AUTO_AGENT_STAGE_IDS:
         _execute_current_stage_agent(pipeline)
     
-    # 2. 统一完成当前阶段的收尾流程（不管有没有Agent都走）
+    # 完成当前阶段
     current_stage.mark_done()
-    # 生成审核节点并自动通过
     pipeline.checkpoint_for_current_stage()
+    
+    # 调试模式：自动审批并推进到下一个阶段
     checkpoint = pipeline.current_checkpoint()
     pipeline.approve(checkpoint.id)
-    
-    # 3. 强制只推进一次，绝对不会加两次
-    pipeline.current_stage_index = original_index + 1
-    next_stage = pipeline.current_stage()
-    if next_stage:
-        next_stage.start()
-        pipeline.status = PipelineStatus.RUNNING
-    else:
-        pipeline.status = PipelineStatus.FINISHED
 
     return pipeline
 

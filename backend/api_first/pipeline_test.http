@@ -1,8 +1,13 @@
 @baseUrl = http://127.0.0.1:8002
-@pipelineId = 2db4e106-af42-48eb-95c2-351175b09e1d
-@checkpointId = replace-with-checkpoint-id
+@pipelineId = 3e455c7e-a35e-4511-af51-70c8451de0dd
+@checkpointId = a9bea75f-0384-45b6-87d3-4e0de9b7db74
 
-### 创建 Pipeline
+# ==============================
+# 审批驱动流程测试步骤（按顺序执行）
+# ==============================
+
+### 1. 创建 Pipeline
+# 执行后从返回结果中复制pipeline的id替换上面的@pipelineId
 POST {{baseUrl}}/pipelines
 Content-Type: application/json
 
@@ -10,47 +15,61 @@ Content-Type: application/json
   "requirement_raw": "我要做一个简单的待办事项管理系统，支持增删改查待办，设置待办完成状态，前端页面要好看，后端用Python FastAPI开发"
 }
 
-### 列出所有 Pipelines
-GET {{baseUrl}}/pipelines
-
-### 启动 Pipeline
+### 2. 启动 Pipeline
 POST {{baseUrl}}/pipelines/{{pipelineId}}/run
 Content-Type: application/json
 
 {}
 
-
-
-### 自动推进到结束（已接入 agent 的阶段会自动执行，其余阶段走审批流）
-POST {{baseUrl}}/pipelines/{{pipelineId}}/auto-advance
-Content-Type: application/json
-
-{}
-
-### 单步推进一个 Stage（兼容接口：若当前阶段已接入 agent，会优先自动执行 agent）
-POST {{baseUrl}}/pipelines/{{pipelineId}}/advance-one-stage
-Content-Type: application/json
-
-{}
-
-### 查询 Pipeline 状态
+### 3. 查询 Pipeline 状态
+# 执行后查看status：应该是WAITING_APPROVAL，并且有checkpoint信息，复制checkpoint的id替换上面的@checkpointId
 GET {{baseUrl}}/pipelines/{{pipelineId}}
 
-### 查询当前 Stage
-GET {{baseUrl}}/pipelines/{{pipelineId}}/current-stage
-
-### Approve Checkpoint
+### 4. Approve Checkpoint（审批通过，进入下一个阶段）
+# 执行后会自动推进到下一个阶段，状态变为RUNNING
 POST {{baseUrl}}/checkpoints/{{checkpointId}}/approve
 Content-Type: application/json
 
 {
-	"note": "approved from http file"
+	"note": "需求分析已完成，同意进入方案设计阶段"
 }
 
-### Reject Checkpoint
+### 5. 再次查询 Pipeline 状态
+# 查看是否已经推进到下一个stage（design阶段），状态是RUNNING
+GET {{baseUrl}}/pipelines/{{pipelineId}}
+
+### 6. 标记无Agent阶段完成（design/coding等非自动阶段，人工处理完后调用）
+# 执行后状态变为WAITING_APPROVAL，生成新的checkpoint
+POST {{baseUrl}}/pipelines/{{pipelineId}}/stage-done
+Content-Type: application/json
+
+{}
+
+### 7. 查询状态，复制新的checkpointId
+# 现在状态是WAITING_APPROVAL，获取新的checkpoint id替换@checkpointId
+GET {{baseUrl}}/pipelines/{{pipelineId}}
+
+### 8. Reject Checkpoint（驳回，重新执行当前阶段）
+# 执行后当前阶段会重置，状态变为RUNNING，上下文恢复到checkpoint保存的版本
 POST {{baseUrl}}/checkpoints/{{checkpointId}}/reject
 Content-Type: application/json
 
 {
-	"note": "rejected from http file"
+	"note": "方案设计缺少数据库设计部分，需要补充后重新提交"
 }
+
+### ================
+# 辅助接口
+# ================
+
+### 列出所有 Pipelines
+GET {{baseUrl}}/pipelines
+
+### 查询当前 Stage
+GET {{baseUrl}}/pipelines/{{pipelineId}}/current-stage
+
+### 自动推进到结束（已废弃：仅做兼容，遇到审批状态会停止）
+POST {{baseUrl}}/pipelines/{{pipelineId}}/auto-advance
+Content-Type: application/json
+
+{}

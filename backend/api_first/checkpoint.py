@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import uuid4
+from copy import deepcopy
 
 
 class CheckpointStatus(str, Enum):
@@ -16,8 +17,10 @@ class Checkpoint:
     pipeline_id: str = ""
     stage_id: str = ""
     stage_name: str = ""
+    stage_index: int = 0
     status: CheckpointStatus = CheckpointStatus.PENDING
-    note: str = ""
+    note: Optional[str] = None
+    context_snapshot: Dict[str, Any] = field(default_factory=dict)
     meta: Dict[str, Any] = field(default_factory=dict)
 
     def approve(self, note: str = "") -> None:

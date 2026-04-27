@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Dict, Any
 from uuid import uuid4
+from copy import deepcopy
 
 from .checkpoint import Checkpoint, CheckpointStatus
 from .stage import Stage, StageStatus
@@ -138,6 +139,8 @@ class Pipeline:
             pipeline_id=self.id,
             stage_id=stage.id,
             stage_name=stage.name,
+            stage_index=self.current_stage_index,
+            context_snapshot=deepcopy(self.context)
         )
         self.checkpoints.append(checkpoint)
         self.current_checkpoint_id = checkpoint.id
@@ -186,9 +189,11 @@ class Pipeline:
         next_stage.start()
         return next_stage
 
-    def reject(self, checkpoint_id: Optional[str] = None) -> Stage:
+    def reject(self, checkpoint_id: Optional[str] = None, note: str = "") -> Stage:
         checkpoint = self._resolve_checkpoint(checkpoint_id)
-        checkpoint.reject()
+        checkpoint.reject(note=note)
+        # 恢复上下文快照
+        self.context = deepcopy(checkpoint.context_snapshot)
         stage = self.current_stage()
         if stage is None:
             raise ValueError("no active stage")

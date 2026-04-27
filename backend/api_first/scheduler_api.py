@@ -1,9 +1,9 @@
 from typing import Any, Dict
-
-from fastapi import FastAPI, HTTPException
+import asyncio
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
-from .pipeline import Pipeline
+from .pipeline import Pipeline, PipelineStatus
 from .service import (
     advance_one_stage,
     approve,
@@ -15,6 +15,7 @@ from .service import (
     run_agent_stages,
     reject,
     run_pipeline,
+    _run_auto_agent_stages,
 )
 
 app = FastAPI(title="Pipeline Scheduler API")
@@ -81,10 +82,22 @@ def list_pipelines_api() -> Dict[str, Any]:
     }
 
 
-@app.post("/pipelines/{pipeline_id}/run")
-def run_pipeline_api(pipeline_id: str) -> Dict[str, Any]:
+def run_pipeline_background(pipeline_id: str) -> None:
+    """后台执行pipeline的Agent阶段"""
     try:
-        pipeline = run_pipeline(pipeline_id)
+        _run_auto_agent_stages(get_pipeline(pipeline_id))
+    except Exception as e:
+        print(f"Pipeline执行出错: {str(e)}")
+
+@app.post("/pipelines/{pipeline_id}/run")
+def run_pipeline_api(pipeline_id: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    try:
+        pipeline = get_pipeline(pipeline_id)
+        # 先启动pipeline，立刻返回结果
+        if pipeline.status == PipelineStatus.CREATED:
+            pipeline.start()
+        # 添加后台任务执行Agent逻辑
+        background_tasks.add_task(run_pipeline_background, pipeline_id)
         return _pipeline_to_dict(pipeline)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="pipeline not found") from exc
@@ -108,26 +121,28 @@ def auto_advance_pipeline_api(pipeline_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@app.post("/pipelines/{pipeline_id}/advance-one-stage")
-def advance_one_stage_api(pipeline_id: str) -> Dict[str, Any]:
-    try:
-        pipeline = advance_one_stage(pipeline_id)
-        return _pipeline_to_dict(pipeline)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="pipeline not found") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+# 内部调试接口，不对外公开
+# @app.post("/pipelines/{pipeline_id}/advance-one-stage")
+# def advance_one_stage_api(pipeline_id: str) -> Dict[str, Any]:
+#     try:
+#         pipeline = advance_one_stage(pipeline_id)
+#         return _pipeline_to_dict(pipeline)
+#     except KeyError as exc:
+#         raise HTTPException(status_code=404, detail="pipeline not found") from exc
+#     except ValueError as exc:
+#         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/pipelines/{pipeline_id}/reject")
-def reject_stage_api(pipeline_id: str, req: ActionRequest) -> Dict[str, Any]:
-    try:
-        pipeline = reject(pipeline_id)
-        return _pipeline_to_dict(pipeline)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail="pipeline not found") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+# 已废弃，请使用 /checkpoints/{checkpoint_id}/reject 接口
+# @app.post("/pipelines/{pipeline_id}/reject")
+# def reject_stage_api(pipeline_id: str, req: ActionRequest) -> Dict[str, Any]:
+#     try:
+#         pipeline = reject(pipeline_id, note=req.note)
+#         return _pipeline_to_dict(pipeline)
+#     except KeyError as exc:
+#         raise HTTPException(status_code=404, detail="pipeline not found") from exc
+#     except ValueError as exc:
+#         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/pipelines/{pipeline_id}")
@@ -177,9 +192,8 @@ def approve_checkpoint_api(checkpoint_id: str, req: ActionRequest | None = None)
 def reject_checkpoint_api(checkpoint_id: str, req: ActionRequest | None = None) -> Dict[str, Any]:
     try:
         checkpoint = get_checkpoint(checkpoint_id)
-        pipeline = reject(checkpoint.pipeline_id, checkpoint_id=checkpoint.id)
-        if req and req.note:
-            checkpoint.note = req.note
+        note = req.note if req and req.note else ""
+        pipeline = reject(checkpoint.pipeline_id, checkpoint_id=checkpoint.id, note=note)
         return _pipeline_to_dict(pipeline)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="checkpoint not found") from exc
