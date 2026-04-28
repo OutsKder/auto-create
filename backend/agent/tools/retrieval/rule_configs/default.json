@@ -1,0 +1,24 @@
+{
+  "term_map": {
+    "用户": ["user", "users", "auth", "account", "profile", "permission"],
+    "邮箱": ["email", "mail", "smtp", "notification", "auth"],
+    "登录": ["login", "auth", "token", "session"],
+    "权限": ["permission", "role", "acl", "guard"]
+  },
+  "synonym_map": {
+    "user": ["users", "account", "profile"],
+    "email": ["mail", "smtp"],
+    "auth": ["login", "token", "session"]
+  },
+  "zh_map": {
+    "用户": ["user", "users", "account", "profile"],
+    "邮箱": ["email", "mail", "smtp"],
+    "登录": ["login", "auth", "token", "session"],
+    "权限": ["permission", "role", "acl", "guard"],
+    "计算器": ["calculator", "operation", "operations", "compute"],
+    "乘法": ["multiply", "mul", "operation"],
+    "除法": ["divide", "div", "operation"],
+    "浮点": ["float", "decimal", "precision"],
+    "精度": ["precision", "decimal", "round"]
+  }
+}

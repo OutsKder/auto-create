@@ -1,0 +1,36 @@
+[
+  {
+    "id": "calc_mul_div_float",
+    "description": "乘法除法与浮点能力应命中核心计算文件",
+    "repo_rel_path": "testcode",
+    "query": "为计算器新增乘法除法并支持浮点",
+    "top_k": 20,
+    "rule_pack_name": "default",
+    "expected_paths": [
+      "core/calculator.py",
+      "core/operations.py"
+    ]
+  },
+  {
+    "id": "calc_runtime_entry",
+    "description": "应用运行入口相关需求应覆盖主入口文件",
+    "repo_rel_path": "testcode",
+    "query": "计算器启动流程和主入口行为",
+    "top_k": 20,
+    "rule_pack_name": "default",
+    "expected_paths": [
+      "main.py"
+    ]
+  },
+  {
+    "id": "calc_logging",
+    "description": "日志相关需求应命中日志模块",
+    "repo_rel_path": "testcode",
+    "query": "计算器日志记录和logger初始化",
+    "top_k": 20,
+    "rule_pack_name": "default",
+    "expected_paths": [
+      "utils/logger.py"
+    ]
+  }
+]

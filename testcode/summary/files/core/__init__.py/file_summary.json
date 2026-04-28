@@ -1,0 +1,16 @@
+{
+  "path": "core/__init__.py",
+  "language": "python",
+  "purpose": "Module about core",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "core",
+    "init",
+    "py"
+  ],
+  "depends_on": [],
+  "size_bytes": 0,
+  "importance_score": -0.5,
+  "generated_at": "2026-04-28T08:33:32.616270+00:00"
+}

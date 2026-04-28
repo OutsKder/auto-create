@@ -2,6 +2,7 @@ import os
 import ast
 import re
 from typing import List, Dict, Any
+from .context_retrieval_step2 import retrieve_precise_context
 
 
 class CodebaseContextTool:
@@ -13,12 +14,21 @@ class CodebaseContextTool:
     def __init__(self, workspace_root: str):
         self.workspace_root = workspace_root
 
-    def extract_context(self, query: str = "") -> Dict[str, Any]:
+    def extract_context(
+        self,
+        context: Dict[str, Any] | None = None,
+        query: str = "",
+        rule_pack_name: str = "default",
+    ) -> Dict[str, Any]:
         """
         提取结构化的代码库上下文。
-        目前只实现了 Step 1 (毫秒级 AST Repo-Map 骨架提取)。
+        Step 1 使用本地 AST Repo-Map；Step 2 使用精准检索补充 hot_files 与依赖签名。
         """
-        if not os.path.exists(self.workspace_root):
+        context = context or {}
+        codebase = context.get("codebase", {}) if isinstance(context, dict) else {}
+        repo_path = codebase.get("repo_path") or self.workspace_root
+
+        if not os.path.exists(repo_path):
             return {
                 "query": query,
                 "repo_skeleton": "项目目录暂不存在，请基于需求从零开始设计架构。",
@@ -26,14 +36,20 @@ class CodebaseContextTool:
                 "dependency_signatures": [],
             }
 
-        return {
-            "query": query,
-            "repo_skeleton": self._generate_repo_map(),
-            "hot_files": [],  # Step 2: 待实现的热点文件全量代码
-            "dependency_signatures": [],  # Step 3: 待实现的依赖签名提取
-        }
+        repo_skeleton = self._generate_repo_map(repo_path=repo_path)
+        return retrieve_precise_context(
+            {
+                "query": query,
+                "repo_path": repo_path,
+                "repo_skeleton": repo_skeleton,
+                "top_k": 20,
+                "expand_hops": 1,
+                "max_file_chars": 30000,
+                "rule_pack_name": rule_pack_name,
+            }
+        )
 
-    def _generate_repo_map(self) -> str:
+    def _generate_repo_map(self, repo_path: str | None = None) -> str:
         """
         Step 1: 生成项目全景图谱 (Repo-map)
         使用 Python built-in AST 解析 Python 文件，提取类名与函数签名，其他文件使用正则或只显示名称
@@ -41,7 +57,8 @@ class CodebaseContextTool:
         structure = []
 
         # 遍历工作目录下的所有文件和文件夹
-        for root, dirs, files in os.walk(self.workspace_root):
+        repo_path = repo_path or self.workspace_root
+        for root, dirs, files in os.walk(repo_path):
             # 过滤不需要的目录
             dirs[:] = [
                 d
@@ -54,6 +71,7 @@ class CodebaseContextTool:
                     "venv",
                     "env",
                     ".opencode",
+                    "summary",
                 ]
             ]
 
@@ -67,7 +85,7 @@ class CodebaseContextTool:
 
                 # 构建文件的完整路径和相对路径
                 full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, self.workspace_root)
+                rel_path = os.path.relpath(full_path, repo_path)
                 structure.append(f"- {rel_path}")
 
                 try:

@@ -1,0 +1,25 @@
+{
+  "path": "core/operations.py",
+  "language": "python",
+  "purpose": "Module around def add",
+  "main_symbols": [
+    "def add",
+    "def subtract"
+  ],
+  "exports": [
+    "add",
+    "subtract"
+  ],
+  "keywords": [
+    "core",
+    "operations",
+    "py",
+    "def",
+    "add",
+    "subtract"
+  ],
+  "depends_on": [],
+  "size_bytes": 117,
+  "importance_score": 4.5,
+  "generated_at": "2026-04-28T08:33:32.615119+00:00"
+}

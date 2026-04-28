@@ -1,0 +1,16 @@
+{
+  "path": "temp_styles.txt",
+  "language": "text",
+  "purpose": "Module about temp",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "temp",
+    "styles",
+    "txt"
+  ],
+  "depends_on": [],
+  "size_bytes": 87529,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.345043+00:00"
+}

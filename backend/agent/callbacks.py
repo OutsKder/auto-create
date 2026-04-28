@@ -1,5 +1,6 @@
 import time
 import sys
+import os
 from typing import Any, Dict, List, Optional
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import BaseMessage
@@ -29,6 +30,7 @@ class TraceCallbackHandler(BaseCallbackHandler):
         self.token_source = (
             "estimate"  # token来源: "actual"表示精准获取, "estimate"表示估算
         )
+        self.compact_mode = os.getenv("AGENT_TRACE_COMPACT", "0") == "1"
 
     # 模型执行开始时触发
     def on_chat_model_start(
@@ -44,11 +46,16 @@ class TraceCallbackHandler(BaseCallbackHandler):
         self.prompts = [
             [m.content for m in msg_list] for msg_list in messages
         ]  # 提取系统提示、用户输入等的文本内容
-        print("\n[AI思考中] 正在逐字输出...")
+        if self.compact_mode:
+            print("\n[AI思考中] 生成中...")
+        else:
+            print("\n[AI思考中] 正在逐字输出...")
 
     # 模型生成新 token 时触发
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """接收新生成的 token 实现流式输出"""
+        if self.compact_mode:
+            return
         sys.stdout.write(token)
         sys.stdout.flush()
 
@@ -56,7 +63,8 @@ class TraceCallbackHandler(BaseCallbackHandler):
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """模型执行结束记录生成结果与 Token 开销"""
         self.end_time = time.time()
-        print("\n\n")
+        if not self.compact_mode:
+            print("\n\n")
 
         # 提取模型生成的文本内容
         if len(response.generations) > 0 and len(response.generations[0]) > 0:
@@ -146,7 +154,8 @@ class TraceCallbackHandler(BaseCallbackHandler):
         print(
             f"🪙  Tokens 消耗 ({token_source_text}): 提示词 {self.prompt_tokens} + 补全 {self.completion_tokens} = 总计 {self.total_tokens}"
         )
-        print(
-            f"📝  请求Prompt预览: {str(self.prompts)[:200] if self.prompts else '[]'}..."
-        )
+        if not self.compact_mode:
+            print(
+                f"📝  请求Prompt预览: {str(self.prompts)[:200] if self.prompts else '[]'}..."
+            )
         print("=" * 41)

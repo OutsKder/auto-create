@@ -1,0 +1,92 @@
+{
+  "summary": {
+    "case_count": 3,
+    "recall_at_k_avg": 1.0,
+    "recall_at_k_min": 1.0,
+    "coverage_pass_rate": 1.0,
+    "avg_candidate_count": 10.0,
+    "avg_latency_ms": 12.19,
+    "p95_latency_ms": 16.9
+  },
+  "results": [
+    {
+      "id": "calc_mul_div_float",
+      "description": "乘法除法与浮点能力应命中核心计算文件",
+      "repo_path": "D:\\aLCY\\2Study\\203Programming\\agent飞书\\auto-create\\testcode",
+      "query": "为计算器新增乘法除法并支持浮点",
+      "expected_paths": [
+        "core/calculator.py",
+        "core/operations.py"
+      ],
+      "retrieved_paths": [
+        "main.py",
+        "core/calculator.py",
+        "core/calculator.py",
+        "core/operations.py",
+        "utils/logger.py",
+        "core/operations.py",
+        "README.md",
+        "core/__init__.py",
+        "utils/logger.py",
+        "utils/__init__.py"
+      ],
+      "recall_at_k": 1.0,
+      "coverage_pass": true,
+      "uncovered_points": [],
+      "candidate_count": 10,
+      "latency_ms": 16.9
+    },
+    {
+      "id": "calc_runtime_entry",
+      "description": "应用运行入口相关需求应覆盖主入口文件",
+      "repo_path": "D:\\aLCY\\2Study\\203Programming\\agent飞书\\auto-create\\testcode",
+      "query": "计算器启动流程和主入口行为",
+      "expected_paths": [
+        "main.py"
+      ],
+      "retrieved_paths": [
+        "main.py",
+        "core/calculator.py",
+        "core/operations.py",
+        "core/calculator.py",
+        "utils/logger.py",
+        "core/operations.py",
+        "README.md",
+        "core/__init__.py",
+        "utils/logger.py",
+        "utils/__init__.py"
+      ],
+      "recall_at_k": 1.0,
+      "coverage_pass": true,
+      "uncovered_points": [],
+      "candidate_count": 10,
+      "latency_ms": 9.31
+    },
+    {
+      "id": "calc_logging",
+      "description": "日志相关需求应命中日志模块",
+      "repo_path": "D:\\aLCY\\2Study\\203Programming\\agent飞书\\auto-create\\testcode",
+      "query": "计算器日志记录和logger初始化",
+      "expected_paths": [
+        "utils/logger.py"
+      ],
+      "retrieved_paths": [
+        "main.py",
+        "core/calculator.py",
+        "core/operations.py",
+        "core/calculator.py",
+        "utils/logger.py",
+        "core/operations.py",
+        "README.md",
+        "core/__init__.py",
+        "utils/logger.py",
+        "utils/__init__.py"
+      ],
+      "recall_at_k": 1.0,
+      "coverage_pass": true,
+      "uncovered_points": [],
+      "candidate_count": 10,
+      "latency_ms": 10.37
+    }
+  ]
+}

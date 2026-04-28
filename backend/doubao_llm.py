@@ -13,7 +13,9 @@ llm = ChatOpenAI(
     api_key=DOUBAO_API_KEY,
     base_url="https://ark.cn-beijing.volces.com/api/v3",
     temperature=0.7,
-    streaming=True,
+    streaming=False,
+    timeout=60,
+    max_retries=1,
 )
 
 
@@ -24,11 +26,14 @@ def chat_with_doubao(
     使用 LangChain 调用豆包大模型
     """
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
-    try:
-        response = llm.invoke(messages)
-        return response.content
-    except Exception as e:
-        return f"请求失败: {str(e)}"
+    last_error = None
+    for _ in range(2):
+        try:
+            response = llm.invoke(messages)
+            return response.content
+        except Exception as e:
+            last_error = e
+    return f"请求失败: {str(last_error)}"
 
 
 def stream_chat_with_doubao(

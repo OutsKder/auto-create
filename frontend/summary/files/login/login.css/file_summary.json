@@ -1,0 +1,15 @@
+{
+  "path": "login/login.css",
+  "language": "css",
+  "purpose": "Module about login",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "login",
+    "css"
+  ],
+  "depends_on": [],
+  "size_bytes": 11490,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.347818+00:00"
+}
