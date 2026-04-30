@@ -504,7 +504,61 @@ class CodeGeneratorAgent(BaseAgent):
         ]
     }
 }
+
+---
+
+更新说明（与 Diff/Test 契约同步）:
+
+- 输出必须遵循结构化 Diff Bundle，便于机器应用、审计与测试回放。
+- 推荐模型输出采用局部 Search/Replace 补丁协议（见下），并在外层封装为 `patches` 数组。
+
+Search / Replace 补丁协议示例：
+
 ```
+
+FILE: path/to/file.py
+<<<<<<< SEARCH
+旧代码块
+=======
+新代码块
+
+> > > > > > > REPLACE
+
+````
+
+结构化 `code_diff` 建议格式（Diff Bundle）：
+
+```json
+{
+    "stage": "coding",
+    "mode": "diff_bundle",
+    "files_changed": ["backend/app/service.py"],
+    "patches": [
+        {
+            "file_path": "backend/app/service.py",
+            "change_type": "modify",
+            "patch_format": "search_replace",
+            "patch": "FILE: backend/app/service.py\n<<<<<<< SEARCH\n...\n=======\n...\n>>>>>>> REPLACE",
+            "reason": "实现技术方案中的新增校验逻辑",
+            "risk_level": "low"
+        }
+    ],
+    "diff": "git diff --no-index style text",
+    "validation": {
+        "static_checks": ["syntax", "format", "targeted_lint"],
+        "runtime_checks": []
+    }
+}
+````
+
+要点：
+
+- `files_changed` 用于权限与审计控制；Agent 不得超出这些文件的修改范围（由 Pipeline / 工厂层强制）。
+- `patches` 是机器可回放的单元；执行器应逐个应用并校验回退能力。
+- `diff` 便于人工 Review 与 Review Agent 输入。
+- `validation` 记录本轮已做的静态/运行检查，便于 Triage。
+
+````
 
 ---
 
@@ -548,11 +602,11 @@ class TestEngineerAgent(BaseAgent):
         result = self._invoke_llm(messages, output_schema)
 
         return {"tests": result.model_dump()}
-```
+````
 
 **输出结构**：
 
-```python
+````python
 {
     "tests": {
         "unit_tests": str,          # 单元测试代码
@@ -573,7 +627,54 @@ class TestEngineerAgent(BaseAgent):
         }
     }
 }
-```
+
+---
+
+更新说明（与 Diff/Test 契约同步）:
+
+- `tests` 输出应为结构化 Test Bundle，包含 `test_plan`、`test_files`、`test_code`、`runner_commands` 与 `sandbox_result`。
+- `runner_commands` 是 Runner 的直接输入；Runner 在沙盒中执行后必须返回 `sandbox_result`，包含 `passed`、`exit_code` 与详细 `logs`。
+
+推荐 `tests` 结构示例：
+
+```json
+{
+    "stage": "testing",
+    "test_plan": [
+        {
+            "acceptance_criterion": "用户可以成功创建任务",
+            "test_type": "unit",
+            "coverage_target": ["create_task", "validate_input"]
+        }
+    ],
+    "test_files": [
+        {
+            "file_path": "tests/test_task_service.py",
+            "test_type": "unit",
+            "covers": ["create_task"]
+        }
+    ],
+    "test_code": "...",
+    "runner_commands": ["pytest tests/test_task_service.py -q"],
+    "sandbox_result": {
+        "passed": false,
+        "exit_code": 1,
+        "logs": "..."
+    }
+}
+````
+
+要点：
+
+- 测试 Agent 不改业务代码，仅输出测试资产；若测试暴露问题，回路由 CodeGen Agent 最小修复。
+- 所有外部依赖必须 mock；Runner 必须在隔离容器中执行。
+- `sandbox_result` 是 Triage 的主要输入，必须尽可能保留原始 stdout/stderr 与 exit_code 以便分类错误类型。
+
+---
+
+以上修改将 4.3 与 4.4 节的接口说明与 `backend/agent/temp/agent3/代码生成agent设计方案.md` 中定义的 Diff/Test 契约保持一致，后续如果需要我可以继续把文档末尾的接口清单（第9节）与此契约合并成最终对照表。
+
+````
 
 ---
 
@@ -616,7 +717,7 @@ class SeniorReviewerAgent(BaseAgent):
         result = self._invoke_llm(messages, output_schema)
 
         return {"review": result.model_dump()}
-```
+````
 
 **输出结构**：
 

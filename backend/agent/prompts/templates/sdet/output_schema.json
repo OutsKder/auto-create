@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "stage": {"type": "string"},
+    "test_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "acceptance_criterion": {"type": "string"},
+          "test_type": {"type": "string"},
+          "coverage_target": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["acceptance_criterion", "test_type", "coverage_target"]
+      }
+    },
+    "test_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_path": {"type": "string"},
+          "test_type": {"type": "string"},
+          "covers": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["file_path", "test_type", "covers"]
+      }
+    },
+    "test_code": {"type": "string"},
+    "runner_commands": {"type": "array", "items": {"type": "string"}},
+    "sandbox_result": {
+      "type": "object",
+      "properties": {
+        "passed": {"type": "boolean"},
+        "exit_code": {"type": "integer"},
+        "logs": {"type": "string"}
+      },
+      "required": ["passed", "exit_code", "logs"]
+    }
+  },
+  "required": ["stage", "test_plan", "test_files", "test_code", "runner_commands", "sandbox_result"]
+}

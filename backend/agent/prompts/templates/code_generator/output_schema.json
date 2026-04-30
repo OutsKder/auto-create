@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "properties": {
+    "stage": {"type": "string"},
+    "mode": {"type": "string"},
+    "files_changed": {"type": "array", "items": {"type": "string"}},
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_path": {"type": "string"},
+          "change_type": {"type": "string"},
+          "patch_format": {"type": "string"},
+          "patch": {"type": "string"},
+          "reason": {"type": "string"},
+          "risk_level": {"type": "string"}
+        },
+        "required": ["file_path", "change_type", "patch_format", "patch", "reason", "risk_level"]
+      }
+    },
+    "diff": {"type": "string"},
+    "validation": {
+      "type": "object",
+      "properties": {
+        "static_checks": {"type": "array", "items": {"type": "string"}},
+        "runtime_checks": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["static_checks", "runtime_checks"]
+    }
+  },
+  "required": ["stage", "mode", "files_changed", "patches", "diff", "validation"]
+}
