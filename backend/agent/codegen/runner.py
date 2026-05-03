@@ -45,6 +45,8 @@ class Runner:
         return self._run_locally(commands, repo_path)
 
     def _run_locally(self, commands: List[str], repo_path: str) -> SandboxResult:
+        import sys
+
         logs = []
         for cmd in commands:
             compat_result = self._run_windows_compat_command(cmd, repo_path)
@@ -58,26 +60,43 @@ class Runner:
                     )
                 continue
 
-            if os.name == "nt":
+            # 处理 pytest 命令，改为使用完整 Python 路径
+            processed_cmd = cmd
+            if cmd.strip().startswith("pytest "):
+                # 使用当前 Python 解释器的完整路径
+                python_exe = sys.executable
+                pytest_args = cmd[6:].strip()  # 移除 "pytest " 前缀
+                processed_cmd = f'"{python_exe}" -m pytest {pytest_args}'
+
+            try:
+                # 在 Windows 上使用 utf-8 编码避免中文处理问题
                 proc = subprocess.run(
-                    cmd,
+                    processed_cmd,
                     shell=True,
                     cwd=repo_path,
                     capture_output=True,
-                    text=True,
+                    encoding="utf-8",
                     timeout=self.timeout,
+                    errors="replace",  # 遇到编码错误时替换
                 )
-            else:
+                stdout_text = proc.stdout or ""
+                stderr_text = proc.stderr or ""
+            except UnicodeDecodeError:
+                # 如果仍有编码问题，使用 latin-1（更兼容）
                 proc = subprocess.run(
-                    cmd,
+                    processed_cmd,
                     shell=True,
                     cwd=repo_path,
                     capture_output=True,
-                    text=True,
+                    encoding="latin-1",
                     timeout=self.timeout,
+                    errors="replace",
                 )
+                stdout_text = proc.stdout or ""
+                stderr_text = proc.stderr or ""
+
             logs.append(
-                f"$ {cmd}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}\nexit:{proc.returncode}\n"
+                f"$ {cmd}\nstdout:\n{stdout_text}\nstderr:\n{stderr_text}\nexit:{proc.returncode}\n"
             )
             if proc.returncode != 0:
                 return SandboxResult(

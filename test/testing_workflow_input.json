@@ -239,8 +239,7 @@
       "core/operations.py",
       "core/calculator.py",
       "core/history_storage.py",
-      "main.py",
-      "tests/test_operations.py"
+      "main.py"
     ],
     "patches": [
       {
@@ -278,15 +277,6 @@
         "reason": "新增乘除运算、历史管理功能的演示逻辑，原有加法运算示例完全保留",
         "risk_level": "low",
         "plan_item_id": null
-      },
-      {
-        "file_path": "tests/test_operations.py",
-        "change_type": "create",
-        "patch_format": "full_content",
-        "patch": "\"\"\"Fallback module generated from design fallback.\n\nReason: 新增mul、div运算单元测试用例，覆盖整数、负数、小数、除数为0等场景，单元测试覆盖率不低于90%，同时保留原有加减运算的回归测试用例\n\"\"\"\n",
-        "reason": "新增mul、div运算单元测试用例，覆盖整数、负数、小数、除数为0等场景，单元测试覆盖率不低于90%，同时保留原有加减运算的回归测试用例",
-        "risk_level": "low",
-        "plan_item_id": null
       }
     ],
     "diff": "",
@@ -305,10 +295,6 @@
           "errors": []
         },
         "main.py": {
-          "ok": true,
-          "errors": []
-        },
-        "tests/test_operations.py": {
           "ok": true,
           "errors": []
         }
