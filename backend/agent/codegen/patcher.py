@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import re
-from .models import Patch, PatchResult
+from ..contracts import Patch, PatchResult
 from .utils import atomic_write, read_file
 
 
@@ -38,6 +38,13 @@ class Patcher:
 
         try:
             if patch.change_type == "create":
+                create_error = self._validate_create_patch(patch)
+                if create_error:
+                    return PatchResult(
+                        file_path=patch.file_path,
+                        applied=False,
+                        error=create_error,
+                    )
                 if os.path.exists(path):
                     return PatchResult(
                         file_path=patch.file_path,
@@ -102,3 +109,17 @@ class Patcher:
             return PatchResult(file_path=patch.file_path, applied=False, error=str(exc))
         except Exception as exc:
             return PatchResult(file_path=patch.file_path, applied=False, error=str(exc))
+
+    def _validate_create_patch(self, patch: Patch) -> str:
+        if patch.patch_format != "full_content":
+            return "create patch must use full_content format"
+
+        patch_text = (patch.patch or "").strip()
+        if not patch_text and patch.file_path.lower().endswith(".py"):
+            return "create patch for python file must contain complete file content"
+
+        forbidden_markers = ["<<<<<<< SEARCH", "=======", ">>>>>>> REPLACE", "FILE:"]
+        if any(marker in patch_text for marker in forbidden_markers):
+            return "create patch must be raw full file content, not a SEARCH/REPLACE block"
+
+        return ""

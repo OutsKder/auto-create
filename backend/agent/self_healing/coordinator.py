@@ -1,329 +1,390 @@
-"""
-coordinator.py - 自愈循环协调器
+"""Self-healing workflow coordinator.
 
-协调整个自愈循环过程，整合 CodeGen -> SDET -> Runner -> TriageAgent -> RetryManager
+The coordinator owns orchestration only. Agents produce structured artifacts,
+TestingWorkflow performs the side effects, and Triage/Retry decide whether the
+next CodeGen attempt should receive failure feedback.
 """
+
+from __future__ import annotations
 
 import time
-from typing import Dict, Any, Optional, List
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from backend.agent.agents import CodeGeneratorAgent, SDETAgent
-from backend.agent.codegen.runner import Runner
-from backend.agent.codegen import Patcher, Patch
-from backend.agent.workspace import WorkspaceManager
-from backend.doubao_llm import llm as doubao_llm
+from pydantic import BaseModel, Field
+
 from backend.agent import RequirementAnalyst, TechArchitect
-from .triage_agent import TriageAgent
+from backend.agent.agents import CodeGeneratorAgent, SDETAgent
+from backend.agent.codegen import SandboxResult, TestingWorkflow, TestingWorkflowConfig
+from backend.agent.codegen.testing_options import build_testing_options
+
+from .models import FailureAnalysis, SelfHealingIteration, SelfHealingReport
 from .retry_manager import RetryManager
-from .models import SelfHealingReport, SelfHealingIteration, FailureAnalysis
+from .triage_agent import TriageAgent
+
+
+class SelfHealingConfig(BaseModel):
+    """Runtime settings for self-healing orchestration."""
+
+    max_retries: int = 3
+    use_docker: bool = True
+    testing: TestingWorkflowConfig = Field(default_factory=TestingWorkflowConfig)
 
 
 class SelfHealingCoordinator:
-    """自愈循环协调器
-
-    职责：
-    - 管理整个自愈循环
-    - 协调 CodeGen -> SDET -> Runner -> TriageAgent 的流程
-    - 记录每次迭代的详细信息
-    - 生成最终报告
-    """
+    """Coordinate CodeGen -> SDET -> TestingWorkflow -> Triage retry loops."""
 
     def __init__(
-        self, max_retries: int = 3, use_docker: bool = True, llm_provider: Any = None
+        self,
+        max_retries: int = 3,
+        use_docker: bool = True,
+        config: Optional[SelfHealingConfig] = None,
+        llm_provider: Any = None,
+        requirement_agent: Any = None,
+        architect_agent: Any = None,
+        codegen_agent: Any = None,
+        sdet_agent: Any = None,
+        testing_workflow: Optional[TestingWorkflow] = None,
+        triage_agent: Optional[TriageAgent] = None,
+        retry_manager: Optional[RetryManager] = None,
     ):
-        """初始化协调器
+        self.config = config or SelfHealingConfig(
+            max_retries=max_retries,
+            use_docker=use_docker,
+            testing=TestingWorkflowConfig(use_docker=use_docker),
+        )
+        provider = llm_provider
+        if provider is None and any(
+            agent is None
+            for agent in (requirement_agent, architect_agent, codegen_agent, sdet_agent)
+        ):
+            from backend.agent.llm import default_llm
 
-        Args:
-            max_retries: 最大重试次数
-            use_docker: 是否使用 Docker 执行测试
-            llm_provider: LLM 提供者（如未指定则使用豆包 LLM）
-        """
-        if llm_provider is None:
-            llm_provider = doubao_llm
+            provider = default_llm
 
-        self.codegen = CodeGeneratorAgent(llm_provider=llm_provider)
-        self.sdet = SDETAgent(llm_provider=llm_provider)
-        self.runner = Runner(use_docker=use_docker)
-        self.triage = TriageAgent()
-        self.retry_manager = RetryManager(max_retries=max_retries)
-        self.workspace_manager = WorkspaceManager()
+        self.requirement_agent = requirement_agent or RequirementAnalyst(
+            llm_provider=provider
+        )
+        self.architect_agent = architect_agent or TechArchitect(llm_provider=provider)
+        self.codegen = codegen_agent or CodeGeneratorAgent(llm_provider=provider)
+        self.sdet = sdet_agent or SDETAgent(llm_provider=provider)
+        self.testing_workflow = testing_workflow or TestingWorkflow(
+            default_config=self.config.testing
+        )
+        self.triage = triage_agent or TriageAgent()
+        self.retry_manager = retry_manager or RetryManager(
+            max_retries=self.config.max_retries
+        )
 
-        self.use_docker = use_docker
         self._failure_history: List[FailureAnalysis] = []
         self._iterations_log: List[SelfHealingIteration] = []
-        self._start_time = None
+        self._start_time = 0.0
 
     def execute_with_self_healing(self, context: dict) -> SelfHealingReport:
-        """
-        执行代码生成 + 测试 + 自愈循环
-
-        Args:
-            context: {
-                "requirement_raw": str,  # 原始需求
-                "codebase": {
-                    "repo_path": str,
-                },
-            }
-
-        Returns:
-            SelfHealingReport: 完整的自愈循环报告
-        """
-
+        """Run the full self-healing loop for a requirement and codebase."""
         self._start_time = time.time()
         self.retry_manager.reset()
         self._failure_history = []
         self._iterations_log = []
 
         try:
-            # 前置步骤：需求分析和方案设计
-            print(f"\n{'='*70}")
-            print("📋 前置步骤：需求分析")
-            print(f"{'='*70}\n")
-
-            analyst = RequirementAnalyst(llm_provider=doubao_llm)
-            analyst_result = analyst.execute(
-                {"requirement_raw": context["requirement_raw"]}
-            )
-            requirement_structured = analyst_result.get("requirement_structured", {})
-            print(f"✓ 需求分析完成")
-
-            print(f"\n{'='*70}")
-            print("🏗️  前置步骤：方案设计")
-            print(f"{'='*70}\n")
-
-            architect = TechArchitect(llm_provider=doubao_llm)
-            design_result = architect.execute(
-                {
-                    "requirement_structured": requirement_structured,
-                    "codebase": context["codebase"],
-                }
-            )
-            design_data = design_result.get("design", {})
-            codebase_context = design_result.get("codebase_context", {})
-            print(f"✓ 方案设计完成")
-
-        except Exception as e:
-            print(f"\n❌ 前置步骤失败: {e}")
-            elapsed = time.time() - self._start_time
-            return SelfHealingReport(
-                success=False,
+            self._validate_context(context)
+            requirement_structured, design, codebase_context = self._prepare(context)
+        except Exception as exc:
+            return self._failed_report(
                 iterations=0,
                 final_code=[],
-                test_results={
-                    "passed": False,
-                    "exit_code": 1,
-                    "logs": f"前置步骤失败: {e}",
-                },
-                failure_history=[],
-                total_time=elapsed,
-                iterations_log=[],
+                logs=f"Preparation failed: {exc}",
             )
 
         iteration = 0
-        feedback_for_codegen = None
-        final_patches = []
-        final_test_result = None
-
-        print(f"\n{'='*70}")
-        print("🔄 开始自愈循环...")
-        print(f"{'='*70}\n")
+        feedback_for_codegen: Optional[Dict[str, Any]] = None
+        final_patches: List[Dict[str, Any]] = []
 
         while True:
             iteration += 1
-            print(f"\n{'─'*70}")
-            print(f"⏳ 第 {iteration} 次迭代")
-            print(f"{'─'*70}")
-
             try:
-                # 1. CodeGen：生成或修复代码
-                print(f"\n[1/5] 代码生成 (CodeGen)...")
-                codegen_input = {
-                    "requirement_raw": context["requirement_raw"],
-                    "requirement_structured": requirement_structured,
-                    "design": design_data,
-                    "codebase": context["codebase"],
-                    "codebase_context": codebase_context,
-                }
-
-                if feedback_for_codegen:
-                    codegen_input["failure_feedback"] = feedback_for_codegen
-                    print(
-                        f"      ℹ️ 注入失败反馈: {feedback_for_codegen.get('error_type', '未知')}"
-                    )
-
-                codegen_result = self.codegen.execute(codegen_input)
-                patches = codegen_result.get("code_diff", {}).get("patches", [])
-                print(f"      ✓ 生成 {len(patches)} 个代码补丁")
-                final_patches = patches
-
-                # 2. WorkspaceManager：创建隔离工作区
-                print(f"\n[2/5] 创建隔离工作区...")
-                workspace_path = self.workspace_manager.create_workspace(
-                    context["codebase"]["repo_path"]
+                codegen_result = self._run_codegen(
+                    context=context,
+                    requirement_structured=requirement_structured,
+                    design=design,
+                    codebase_context=codebase_context,
+                    failure_feedback=feedback_for_codegen,
                 )
-                print(f"      ✓ 工作区: {workspace_path}")
+                code_diff = self._to_plain(codegen_result.get("code_diff", {}) or {})
+                final_patches = self._to_plain_list(code_diff.get("patches", []) or [])
 
-                # 3. 应用补丁
-                print(f"\n[3/5] 应用代码补丁...")
-                patcher = Patcher()
-                for i, patch in enumerate(patches):
-                    result = patcher.apply(patch)
-                    status = "✓ 已应用" if result.applied else "✗ 未应用"
-                    print(f"      {status}: {patch.file_path}")
-
-                # 4. SDET：生成测试
-                print(f"\n[4/5] 生成测试套件 (SDET)...")
-                sdet_result = self.sdet.execute(
-                    {
-                        "workspace": workspace_path,
-                        "requirement": context["requirement_raw"],
-                    }
+                sdet_result = self._run_sdet(
+                    context=context,
+                    requirement_structured=requirement_structured,
+                    design=design,
+                    codebase_context=codebase_context,
+                    code_diff=code_diff,
                 )
-                test_bundle = sdet_result.get("test_bundle")
-                runner_commands = test_bundle.runner_commands if test_bundle else []
-                print(f"      ✓ 生成 {len(runner_commands)} 个测试命令")
+                tests = self._to_plain(sdet_result.get("tests", {}) or {})
 
-                # 5. Runner：执行测试
-                print(f"\n[5/5] 在隔离环境执行测试...")
-                runner_result = self.runner.run_commands(
-                    runner_commands,
-                    workspace_path,
-                    (
-                        {
-                            "network_disabled": True,
-                            "read_only": True,
-                            "cpus": "1",
-                            "memory": "512m",
-                        }
-                        if self.use_docker
-                        else {}
-                    ),
+                runner_result = self._run_testing_workflow(
+                    context=context,
+                    requirement_structured=requirement_structured,
+                    design=design,
+                    codebase_context=codebase_context,
+                    code_diff=code_diff,
+                    tests=tests,
                 )
-                final_test_result = runner_result
-                print(
-                    f"      {'✓' if runner_result.passed else '✗'} 测试 {'通过' if runner_result.passed else '失败'}"
-                )
-                print(f"      exit_code: {runner_result.exit_code}")
 
-                # 记录本次迭代
                 iteration_log = SelfHealingIteration(
                     iteration_num=iteration,
                     codegen_output=codegen_result,
                     test_result={
                         "passed": runner_result.passed,
                         "exit_code": runner_result.exit_code,
-                        "logs_snippet": runner_result.logs[:200],
+                        "logs_snippet": (runner_result.logs or "")[:200],
                     },
                     passed=runner_result.passed,
                 )
                 self._iterations_log.append(iteration_log)
 
-                # 6. 判断结果
                 if runner_result.passed:
-                    print(f"\n{'='*70}")
-                    print(f"✅ 第 {iteration} 次迭代成功！")
-                    print(f"{'='*70}\n")
-
-                    elapsed = time.time() - self._start_time
-                    return SelfHealingReport(
-                        success=True,
-                        iterations=iteration,
-                        final_code=patches,
-                        test_results={
-                            "passed": True,
-                            "exit_code": 0,
-                            "logs": runner_result.logs,
-                        },
-                        failure_history=[],
-                        total_time=elapsed,
-                        iterations_log=self._iterations_log,
-                    )
-
-                # 7. 失败：进行诊断
-                print(f"\n❌ 第 {iteration} 次迭代失败，开始失败诊断...\n")
-
-                triage_result = self.triage.execute(
-                    {
-                        "sandbox_result": runner_result,
-                        "code_changes": str(patches),
-                        "previous_failures": self._failure_history,
-                    }
-                )
-
-                failure_analysis = triage_result["failure_analysis"]
-                self._failure_history.append(failure_analysis)
-
-                # 更新迭代日志
-                iteration_log.failure_analysis = failure_analysis
-
-                print(f"📋 失败诊断结果：")
-                print(f"   错误类型: {failure_analysis.error_type.value}")
-                print(f"   根本原因: {failure_analysis.root_cause}")
-                print(f"   置信度: {failure_analysis.confidence:.0%}")
-                print(f"   修复建议: {failure_analysis.suggestion}")
-
-                # 8. RetryManager：决策是否继续
-                if not self.retry_manager.should_continue(failure_analysis):
-                    print(f"\n{'='*70}")
-                    print(f"⚠️  自愈循环停止")
-                    print(f"{'='*70}\n")
-
-                    elapsed = time.time() - self._start_time
-                    return SelfHealingReport(
-                        success=False,
+                    return self._success_report(
                         iterations=iteration,
                         final_code=final_patches,
-                        test_results={
-                            "passed": False,
-                            "exit_code": runner_result.exit_code,
-                            "logs": runner_result.logs,
-                        },
-                        failure_history=self._failure_history,
-                        final_failure=failure_analysis,
-                        total_time=elapsed,
-                        iterations_log=self._iterations_log,
+                        runner_result=runner_result,
                     )
 
-                # 9. 反馈给 CodeGen，准备下一轮迭代
-                feedback_for_codegen = {
-                    "error_type": failure_analysis.error_type.value,
-                    "error_message": failure_analysis.error_message,
-                    "suggestion": failure_analysis.suggestion,
-                    "failed_code": failure_analysis.code_snippet,
-                    "root_cause": failure_analysis.root_cause,
-                }
+                failure_analysis = self._triage_failure(
+                    runner_result=runner_result,
+                    patches=final_patches,
+                )
+                self._failure_history.append(failure_analysis)
+                iteration_log.failure_analysis = failure_analysis
 
+                if not self.retry_manager.should_continue(failure_analysis):
+                    return self._stopped_report(
+                        iterations=iteration,
+                        final_code=final_patches,
+                        runner_result=runner_result,
+                        final_failure=failure_analysis,
+                    )
+
+                feedback_for_codegen = self._build_failure_feedback(failure_analysis)
                 self.retry_manager.record_failure(failure_analysis)
 
-                if iteration < self.retry_manager.max_retries:
-                    print(f"\n📝 准备第 {iteration + 1} 次迭代...")
-                    print(
-                        f"   重试进度: {self.retry_manager.retry_count}/{self.retry_manager.max_retries}"
-                    )
-
-            except Exception as e:
-                print(f"\n❌ 迭代过程中发生异常: {str(e)}")
-                import traceback
-
-                traceback.print_exc()
-
-                elapsed = time.time() - self._start_time
-                return SelfHealingReport(
-                    success=False,
+            except Exception as exc:
+                return self._failed_report(
                     iterations=iteration,
                     final_code=final_patches,
-                    test_results={
-                        "passed": False,
-                        "exit_code": 1,
-                        "logs": f"Exception: {str(e)}",
-                    },
-                    failure_history=self._failure_history,
-                    final_failure=None,
-                    total_time=elapsed,
-                    iterations_log=self._iterations_log,
+                    logs=f"Exception: {exc}",
                 )
 
     def get_retry_status(self) -> dict:
-        """获取重试状态"""
         return self.retry_manager.get_status()
+
+    def _validate_context(self, context: Dict[str, Any]) -> None:
+        if not str(context.get("requirement_raw", "")).strip():
+            raise ValueError("context.requirement_raw is required")
+
+        codebase = context.get("codebase", {}) or {}
+        if not str(codebase.get("repo_path", "")).strip():
+            raise ValueError("context.codebase.repo_path is required")
+
+    def _prepare(self, context: Dict[str, Any]):
+        analyst_result = self.requirement_agent.execute(
+            {"requirement_raw": context["requirement_raw"]}
+        )
+        requirement_structured = analyst_result.get("requirement_structured", {})
+
+        design_result = self.architect_agent.execute(
+            {
+                "requirement_structured": requirement_structured,
+                "codebase": context["codebase"],
+            }
+        )
+        return (
+            self._to_plain(requirement_structured),
+            self._to_plain(design_result.get("design", {}) or {}),
+            self._to_plain(design_result.get("codebase_context", {}) or {}),
+        )
+
+    def _run_codegen(
+        self,
+        context: Dict[str, Any],
+        requirement_structured: Dict[str, Any],
+        design: Dict[str, Any],
+        codebase_context: Dict[str, Any],
+        failure_feedback: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        payload = {
+            "requirement_raw": context["requirement_raw"],
+            "requirement_structured": requirement_structured,
+            "design": design,
+            "codebase": context["codebase"],
+            "codebase_context": codebase_context,
+        }
+        if failure_feedback:
+            payload["failure_feedback"] = failure_feedback
+        return self.codegen.execute(payload)
+
+    def _run_sdet(
+        self,
+        context: Dict[str, Any],
+        requirement_structured: Dict[str, Any],
+        design: Dict[str, Any],
+        codebase_context: Dict[str, Any],
+        code_diff: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return self.sdet.execute(
+            {
+                "requirement_structured": requirement_structured,
+                "design": design,
+                "code_diff": code_diff,
+                "codebase": context["codebase"],
+                "codebase_context": codebase_context,
+            }
+        )
+
+    def _run_testing_workflow(
+        self,
+        context: Dict[str, Any],
+        requirement_structured: Dict[str, Any],
+        design: Dict[str, Any],
+        codebase_context: Dict[str, Any],
+        code_diff: Dict[str, Any],
+        tests: Dict[str, Any],
+    ) -> SandboxResult:
+        workflow_result = self.testing_workflow.execute(
+            {
+                "requirement_structured": requirement_structured,
+                "design": design,
+                "code_diff": code_diff,
+                "codebase": context["codebase"],
+                "codebase_context": codebase_context,
+                "tests": tests,
+                "testing_options": self._testing_options(context),
+            }
+        )
+        sandbox_result = (workflow_result.get("tests", {}) or {}).get("sandbox_result")
+        if sandbox_result is None:
+            return SandboxResult(
+                passed=False,
+                exit_code=1,
+                logs="TestingWorkflow did not return tests.sandbox_result.",
+            )
+        return SandboxResult.model_validate(sandbox_result)
+
+    def _testing_options(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        profile = str(context.get("testing_profile", "read_write") or "read_write")
+        base_options = self.config.testing.model_dump()
+        user_options = context.get("testing_options", {}) or {}
+        merged = dict(base_options)
+        merged.update(user_options)
+        return build_testing_options(
+            profile=profile,
+            overrides=merged,
+            default_use_docker=self.config.use_docker,
+        )
+
+    def _triage_failure(
+        self, runner_result: SandboxResult, patches: List[Dict[str, Any]]
+    ) -> FailureAnalysis:
+        triage_result = self.triage.execute(
+            {
+                "sandbox_result": runner_result,
+                "code_changes": str(patches),
+                "previous_failures": self._failure_history,
+            }
+        )
+        return triage_result["failure_analysis"]
+
+    def _build_failure_feedback(self, failure: FailureAnalysis) -> Dict[str, Any]:
+        error_type = (
+            failure.error_type
+            if isinstance(failure.error_type, str)
+            else failure.error_type.value
+        )
+        return {
+            "error_type": error_type,
+            "error_message": failure.error_message,
+            "suggestion": failure.suggestion,
+            "failed_code": failure.code_snippet,
+            "root_cause": failure.root_cause,
+        }
+
+    def _to_plain(self, value: Any) -> Dict[str, Any]:
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            return value
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        return {}
+
+    def _to_plain_list(self, values: Any) -> List[Dict[str, Any]]:
+        if not values:
+            return []
+        result = []
+        for value in values:
+            if isinstance(value, dict):
+                result.append(value)
+            elif hasattr(value, "model_dump"):
+                result.append(value.model_dump())
+            else:
+                result.append({"value": value})
+        return result
+
+    def _success_report(
+        self,
+        iterations: int,
+        final_code: List[Dict[str, Any]],
+        runner_result: SandboxResult,
+    ) -> SelfHealingReport:
+        return SelfHealingReport(
+            success=True,
+            iterations=iterations,
+            final_code=final_code,
+            test_results={
+                "passed": True,
+                "exit_code": runner_result.exit_code,
+                "logs": runner_result.logs,
+            },
+            failure_history=self._failure_history,
+            total_time=self._elapsed(),
+            iterations_log=self._iterations_log,
+        )
+
+    def _stopped_report(
+        self,
+        iterations: int,
+        final_code: List[Dict[str, Any]],
+        runner_result: SandboxResult,
+        final_failure: FailureAnalysis,
+    ) -> SelfHealingReport:
+        return SelfHealingReport(
+            success=False,
+            iterations=iterations,
+            final_code=final_code,
+            test_results={
+                "passed": False,
+                "exit_code": runner_result.exit_code,
+                "logs": runner_result.logs,
+            },
+            failure_history=self._failure_history,
+            final_failure=final_failure,
+            total_time=self._elapsed(),
+            iterations_log=self._iterations_log,
+        )
+
+    def _failed_report(
+        self, iterations: int, final_code: List[Dict[str, Any]], logs: str
+    ) -> SelfHealingReport:
+        return SelfHealingReport(
+            success=False,
+            iterations=iterations,
+            final_code=final_code,
+            test_results={"passed": False, "exit_code": 1, "logs": logs},
+            failure_history=self._failure_history,
+            final_failure=None,
+            total_time=self._elapsed(),
+            iterations_log=self._iterations_log,
+        )
+
+    def _elapsed(self) -> float:
+        return time.time() - self._start_time

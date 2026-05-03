@@ -17,11 +17,7 @@
   ],
   "test_code": "...",
   "runner_commands": ["pytest -q"],
-  "sandbox_result": {
-    "passed": false,
-    "exit_code": 0,
-    "logs": ""
-  }
+  "sandbox_result": null
 }
 
 要求：

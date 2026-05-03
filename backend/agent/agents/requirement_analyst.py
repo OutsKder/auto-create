@@ -12,12 +12,13 @@
 """
 
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+import logging
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 from ..base import BaseAgent, AgentConfig
 from ..callbacks import TraceCallbackHandler
+from ..contracts import RequirementAnalystInput, RequirementStructured
 from ..prompts.requirement_analyst import (
     REQUIREMENT_ANALYST_SYSTEM_PROMPT,
     REQUIREMENT_ANALYST_HUMAN_PROMPT,
@@ -28,29 +29,19 @@ from ..prompts.common import (
 )
 
 
-class RequirementStructured(BaseModel):
-    is_clear: bool = Field(
-        description="原始需求是否传达了核心意图和基本业务场景。判定标准要对普通用户友好，只要能看出大概要做什么产品（例如包含了主要的业务对象或期待的结果），即使缺少详细规则，也应设为True并由你基于常识补全细节。仅当毫无逻辑、不知所云时才设为False"
-    )
-    clarifying_questions: List[str] = Field(
-        description="如果 is_clear 为 False，提出1-3个需要用户补充确认的关键问题。如果为 True，此列表可为空"
-    )
-    goal: str = Field(description="核心目标")
-    features: List[str] = Field(description="功能点列表")
-    constraints: List[str] = Field(description="非功能约束(如性能、边界条件、UI约束等)")
-    acceptance_criteria: List[str] = Field(description="验收标准")
-
-
 class RequirementAnalyst(BaseAgent):
     """需求分析 Agent - 扮演资深产品经理"""
 
-    def __init__(
-        self,
-        llm_provider: Any,
-        config: Optional[AgentConfig] = None
-    ):
+    input_model = RequirementAnalystInput
+    output_key = "requirement_structured"
+    output_model = RequirementStructured
+
+    def __init__(self, llm_provider: Any, config: Optional[AgentConfig] = None):
         super().__init__(llm_provider, config)
         self.parser = PydanticOutputParser(pydantic_object=RequirementStructured)
+        self.logger = logging.getLogger(
+            f"{self.__class__.__module__}.{self.__class__.__name__}"
+        )
 
     def get_input_keys(self) -> List[str]:
         return ["requirement_raw"]
@@ -68,53 +59,80 @@ class RequirementAnalyst(BaseAgent):
         3. 解析失败时触发重试自愈
         4. 返回增量 context
         """
+        self._validate_input(context)
         requirement_raw = context.get("requirement_raw", "")
+        self.logger.info(
+            "RequirementAnalyst.execute started; requirement_chars=%d",
+            len(requirement_raw or ""),
+        )
         if not requirement_raw or not requirement_raw.strip():
+            self.logger.error("Missing requirement_raw in context")
             raise ValueError("context 中缺少 requirement_raw")
 
         if len(requirement_raw.strip()) < 5:
-            return self._handle_short_input()
+            self.logger.warning("Input too short, handling as short input")
+            result = self._handle_short_input()
+            self._validate_output(result)
+            self.logger.info("RequirementAnalyst.execute completed with clarification")
+            return result
 
         token_count = self._count_tokens(requirement_raw)
         MAX_TOKENS_LIMIT = 10000
         if token_count > MAX_TOKENS_LIMIT:
+            self.logger.error("Input too long: %d tokens", token_count)
             raise ValueError(
                 f"需求文档过长 (预估 {token_count} Tokens)，"
                 f"请将需求精简至 {MAX_TOKENS_LIMIT} Tokens 以内，或拆分单次任务进行。"
             )
 
         tracer = TraceCallbackHandler()
+        self.logger.debug("Token count estimate: %s", token_count)
 
         try:
+            self.logger.info("Invoking LLM for requirement analysis")
             response = self._invoke_llm(requirement_raw, tracer)
+            self.logger.debug(
+                "LLM response received; response_type=%s", type(response).__name__
+            )
             result = self._parse_response(response, tracer)
         except Exception as e:
+            self.logger.exception("Fatal error during RequirementAnalyst execution")
             raise RuntimeError(f"RequirementAnalyst 执行过程中发生致命错误: {str(e)}")
 
-        return {
-            "requirement_structured": result.dict(),
+        self.logger.info("Requirement analysis completed successfully")
+        output = {
+            "requirement_structured": result.model_dump(),
             "meta_trace": tracer.meta_info,
         }
+        self._validate_output(output)
+        return output
 
     def _handle_short_input(self) -> Dict[str, Any]:
         """处理极端短输入"""
-        print("[RequirementAnalyst] 输入过短，判定为极端无效输入拦截。")
-        return {
+        self.logger.warning(
+            "Input considered too short - returning clarifying question"
+        )
+        output = {
             "requirement_structured": {
                 "is_clear": False,
-                "clarifying_questions": ["您的输入过短或无具体意义，请详细描述您的核心业务需求。"],
+                "clarifying_questions": [
+                    "您的输入过短或无具体意义，请详细描述您的核心业务需求。"
+                ],
                 "goal": "",
                 "features": [],
                 "constraints": [],
                 "acceptance_criteria": [],
             }
         }
+        self._validate_output(output)
+        return output
 
     def _count_tokens(self, text: str) -> int:
         """计算 Token 数量"""
         try:
             # 尝试使用 tiktoken 进行精确的 token 计算
             import tiktoken
+
             # 使用 cl100k_base 编码器，这是 LLM 通常使用的编码器
             encoding = tiktoken.get_encoding("cl100k_base")
             return len(encoding.encode(text))
@@ -122,11 +140,7 @@ class RequirementAnalyst(BaseAgent):
             # 如果 tiktoken 未安装，则退化为按字符长度估算
             return len(text)
 
-    def _invoke_llm(
-        self,
-        requirement_raw: str,
-        tracer: TraceCallbackHandler
-    ) -> Any:
+    def _invoke_llm(self, requirement_raw: str, tracer: TraceCallbackHandler) -> Any:
         """调用 LLM 获取响应"""
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -143,8 +157,17 @@ class RequirementAnalyst(BaseAgent):
             format_instructions=self.parser.get_format_instructions(),
         )
 
-        response = self.llm.invoke(_input, config={"callbacks": [tracer]}) # 调用 LLM 并记录 trace
-        tracer.print_trace_report()
+        self.logger.debug(
+            "Submitting prompt to LLM; prompt length=%d", len(str(_input))
+        )
+        response = self.llm.invoke(
+            _input, config={"callbacks": [tracer]}
+        )  # 调用 LLM 并记录 trace
+        self.logger.info("LLM invocation complete for requirement analysis")
+        try:
+            tracer.print_trace_report()
+        except Exception:
+            self.logger.debug("Trace printing failed, continuing")
         return response
 
     # 解析 LLM 响应，失败时触发重试
@@ -152,22 +175,20 @@ class RequirementAnalyst(BaseAgent):
     # 解析成功后返回结构化需求
     # 解析失败后返回重试结果
     def _parse_response(
-        self,
-        response: Any,
-        tracer: TraceCallbackHandler
+        self, response: Any, tracer: TraceCallbackHandler
     ) -> RequirementStructured:
         """解析 LLM 响应，失败时触发重试"""
         try:
-            return self.parser.parse(response.content)
+            self.logger.debug("Parsing LLM response into RequirementStructured")
+            parsed = self.parser.parse(response.content)
+            self.logger.info("Parsing successful")
+            return parsed
         except Exception as parse_e:
-            print(f"[RequirementAnalyst] 解析失败，触发 Retry 容错自愈... ({parse_e})")
+            self.logger.warning("Parse failed, attempting retry fix: %s", parse_e)
             return self._retry_with_fix(response.content, parse_e, tracer)
 
     def _retry_with_fix(
-        self,
-        wrong_output: str,
-        error_msg: str,
-        tracer: TraceCallbackHandler
+        self, wrong_output: str, error_msg: str, tracer: TraceCallbackHandler
     ) -> RequirementStructured:
         """重试并修复 JSON 解析错误"""
         retry_prompt = ChatPromptTemplate.from_messages(
@@ -183,8 +204,16 @@ class RequirementAnalyst(BaseAgent):
         )
 
         retry_tracer = TraceCallbackHandler()
-        retry_response = self.llm.invoke(retry_input, config={"callbacks": [retry_tracer]})
-        retry_tracer.print_trace_report()
+        self.logger.info("Invoking LLM for retry/fix of malformed JSON")
+        retry_response = self.llm.invoke(
+            retry_input, config={"callbacks": [retry_tracer]}
+        )
+        try:
+            retry_tracer.print_trace_report()
+        except Exception:
+            self.logger.debug("Retry trace print failed")
         tracer.meta_info.update({"retry_meta": retry_tracer.meta_info})
 
-        return self.parser.parse(retry_response.content)
+        parsed = self.parser.parse(retry_response.content)
+        self.logger.info("Retry parsing succeeded")
+        return parsed

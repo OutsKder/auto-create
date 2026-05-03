@@ -12,7 +12,7 @@ from .models import (
 )
 from .retry_manager import RetryManager
 from .triage_agent import TriageAgent
-from .coordinator import SelfHealingCoordinator
+from .coordinator import SelfHealingConfig, SelfHealingCoordinator
 
 __all__ = [
     "ErrorType",
@@ -22,4 +22,5 @@ __all__ = [
     "RetryManager",
     "TriageAgent",
     "SelfHealingCoordinator",
+    "SelfHealingConfig",
 ]

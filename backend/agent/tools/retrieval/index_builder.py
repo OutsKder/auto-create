@@ -16,7 +16,6 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, DefaultDict, Dict, List, Optional, Sequence, Set, Tuple
 
-
 SUPPORTED_INDEX_EXTENSIONS = (
     ".py",
     ".js",
@@ -540,7 +539,7 @@ def _build_file_summary_prompt(
 def _call_summary_llm(system_prompt: str, user_prompt: str) -> str:
     """Call the project LLM for summary generation, falling back cleanly on failure."""
     try:
-        from backend.doubao_llm import chat_with_doubao
+        from backend.agent.llm import chat_with_doubao
 
         return chat_with_doubao(user_prompt, system_prompt=system_prompt)
     except KeyboardInterrupt:

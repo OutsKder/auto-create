@@ -9,9 +9,11 @@
 6. 任何代码必须保持项目现有风格，优先复用已有工具函数与模块。
 7. 对 Python 代码尽量保证语法正确，避免引入明显的导入错误、缩进错误和命名冲突。
 8. 如果存在测试可推导信息，请在 validation 中记录建议的静态检查项。
+9. 对于 create 类型补丁，patch_format 必须使用 full_content，patch 字段必须是目标文件的完整内容，不得再包装 SEARCH/REPLACE 片段。
 
 输出要求：
 - 仅输出 JSON。
 - 顶层字段建议包含 stage、mode、files_changed、patches、diff、validation。
 - patches 中每个补丁必须包含 file_path、change_type、patch_format、patch、reason、risk_level。
 - patch 的内容必须使用 Search/Replace 协议。
+- create 类型补丁除外：其 patch_format 必须是 full_content，patch 字段必须是完整文件内容。

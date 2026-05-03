@@ -8,7 +8,7 @@
         "type": "object",
         "properties": {
           "acceptance_criterion": {"type": "string"},
-          "test_type": {"type": "string"},
+          "test_type": {"enum": ["unit", "integration", "e2e"], "type": "string"},
           "coverage_target": {"type": "array", "items": {"type": "string"}}
         },
         "required": ["acceptance_criterion", "test_type", "coverage_target"]
@@ -20,8 +20,9 @@
         "type": "object",
         "properties": {
           "file_path": {"type": "string"},
-          "test_type": {"type": "string"},
-          "covers": {"type": "array", "items": {"type": "string"}}
+          "test_type": {"enum": ["unit", "integration", "e2e"], "type": "string"},
+            "covers": {"type": "array", "items": {"type": "string"}},
+            "content": {"type": "string"}
         },
         "required": ["file_path", "test_type", "covers"]
       }
@@ -29,7 +30,7 @@
     "test_code": {"type": "string"},
     "runner_commands": {"type": "array", "items": {"type": "string"}},
     "sandbox_result": {
-      "type": "object",
+      "type": ["object", "null"],
       "properties": {
         "passed": {"type": "boolean"},
         "exit_code": {"type": "integer"},

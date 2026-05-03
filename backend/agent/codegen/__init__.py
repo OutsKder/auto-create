@@ -1,17 +1,11 @@
-"""
-codegen 包入口。
+"""Code generation runtime exports.
 
-这个包承载代码生成链路的核心实现与结构化数据模型：
-- models: DiffBundle / TestBundle / SandboxResult 等数据结构
-- patcher: Search/Replace 补丁应用器
-- runner: 沙盒执行器
-- code_generator: 代码生成 Agent 核心实现
-- sdet: 测试生成 Agent 核心实现
-
-上层 `backend.agent.agents` 会通过适配器调用这里的实现，以保持职责清晰。
+Canonical data contracts live in ``backend.agent.contracts``. This package
+exports codegen executors and the most common contract classes for convenient
+runtime imports.
 """
 
-from .models import (
+from ..contracts import (
     DiffBundle,
     Patch,
     PatchResult,
@@ -20,10 +14,11 @@ from .models import (
     TestFile,
     TestPlanItem,
 )
+from .code_generator import CodeGeneratorAgent
 from .patcher import PatchApplyError, Patcher
 from .runner import Runner
-from .code_generator import CodeGeneratorAgent
 from .sdet import SDETAgent
+from .testing_workflow import TestingWorkflow, TestingWorkflowConfig
 
 __all__ = [
     "DiffBundle",
@@ -38,4 +33,6 @@ __all__ = [
     "Runner",
     "CodeGeneratorAgent",
     "SDETAgent",
+    "TestingWorkflow",
+    "TestingWorkflowConfig",
 ]

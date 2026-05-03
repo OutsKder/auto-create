@@ -1,7 +1,7 @@
 {
   "repo_path": "D:\\aLCY\\2Study\\203Programming\\agent飞书\\auto-create\\testcode",
   "index_root": "D:\\aLCY\\2Study\\203Programming\\agent飞书\\auto-create\\testcode\\summary",
-  "generated_at": "2026-04-28T08:33:32.630138+00:00",
+  "generated_at": "2026-05-02T17:26:41.346880+00:00",
   "dir_count": 4,
   "file_count": 7,
   "dirs": {
@@ -15,166 +15,251 @@
       "keywords": [],
       "file_count": 0,
       "child_dir_count": 2,
-      "generated_at": "2026-04-28T08:33:32.628006+00:00"
+      "generated_at": "2026-05-02T17:26:41.343285+00:00"
     },
     ".": {
       "dir": ".",
       "dir_name": "repo root",
       "purpose": "Repository root index",
       "key_files": [
-        "main.py",
-        "README.md"
+        "README.md",
+        "main.py"
       ],
       "exports": [
-        "compute"
+        "run_app",
+        "Calculator",
+        "add",
+        "subtract",
+        "setup_logger"
       ],
       "depends_on": [
-        "core"
+        "sys",
+        "core.calculator",
+        "utils.logger"
       ],
       "keywords": [
-        "calculator",
-        "math",
-        "readme",
-        "md",
-        "Calculator App`n`nThis is a simple calculator application for testing Repo-Map."
+        "lightweight calculator",
+        "arithmetic operation extension",
+        "multiplication",
+        "division",
+        "calculation history persistence",
+        "local storage",
+        "backward compatibility",
+        "usability",
+        "testability",
+        "Repo-Map test",
+        "application entry point",
+        "arithmetic computation",
+        "logger initialization",
+        "multiplication extension",
+        "division extension",
+        "lightweight design",
+        "testability improvement"
       ],
       "file_count": 2,
       "child_dir_count": 0,
-      "generated_at": "2026-04-28T08:33:32.628408+00:00"
+      "generated_at": "2026-05-02T17:26:41.344069+00:00"
     },
     "core": {
       "dir": "core",
       "dir_name": "core",
-      "purpose": "Folder centered on compute",
+      "purpose": "Folder centered on Calculator",
       "key_files": [
         "core/calculator.py",
         "core/operations.py",
         "core/__init__.py"
       ],
       "exports": [
-        "compute"
+        "Calculator",
+        "add",
+        "subtract"
       ],
       "depends_on": [
-        "core"
+        "testcode.core.operations"
       ],
       "keywords": [
         "calculator",
-        "math",
+        "arithmetic computation",
+        "addition",
+        "subtraction",
+        "multiplication",
+        "division",
+        "computation history",
+        "operation validation",
+        "persistent storage",
+        "lightweight application",
+        "testability",
+        "arithmetic operation",
+        "lightweight calculator",
+        "calculation logic",
+        "stateless function",
         "core",
         "init",
         "py"
       ],
       "file_count": 3,
       "child_dir_count": 0,
-      "generated_at": "2026-04-28T08:33:32.629138+00:00"
+      "generated_at": "2026-05-02T17:26:41.345095+00:00"
     },
     "utils": {
       "dir": "utils",
       "dir_name": "utils",
-      "purpose": "Folder centered on compute",
+      "purpose": "Folder centered on setup_logger",
       "key_files": [
         "utils/logger.py",
         "utils/__init__.py"
       ],
       "exports": [
-        "compute"
+        "setup_logger"
       ],
       "depends_on": [
-        "core"
+        "logging"
       ],
       "keywords": [
-        "calculator",
-        "math",
+        "logging",
+        "logger configuration",
+        "calculator debugging",
+        "stream handler",
+        "log formatting",
+        "operation auditing",
         "utils",
         "init",
         "py"
       ],
       "file_count": 2,
       "child_dir_count": 0,
-      "generated_at": "2026-04-28T08:33:32.629763+00:00"
+      "generated_at": "2026-05-02T17:26:41.346018+00:00"
     }
   },
   "files": {
     "main.py": {
       "path": "main.py",
       "language": "python",
-      "purpose": "calculator module",
+      "purpose": "Entry point of the lightweight calculator application, responsible for bootstrapping dependencies including logger and Calculator instance, initializing the application and demonstrating basic arithmetic computation execution. It needs to be extended with multiplication/division operation support and calculation history local persistence capability while retaining original functionality and conforming to lightweight product positioning.",
       "main_symbols": [
-        "compute"
+        "run_app"
       ],
       "exports": [
-        "compute"
+        "run_app"
       ],
       "keywords": [
-        "calculator",
-        "math"
+        "lightweight calculator",
+        "application entry point",
+        "arithmetic computation",
+        "logger initialization",
+        "multiplication extension",
+        "division extension",
+        "calculation history persistence",
+        "backward compatibility",
+        "lightweight design",
+        "testability improvement"
       ],
       "depends_on": [
-        "core/operations.py"
+        "sys",
+        "core.calculator.Calculator",
+        "utils.logger.setup_logger"
       ],
       "size_bytes": 325,
-      "importance_score": 4.65,
-      "generated_at": "2026-04-28T08:33:32.626998+00:00",
+      "importance_score": 4.95,
+      "generated_at": "2026-05-02T17:25:47.664488+00:00",
       "summary_mode": "llm"
     },
     "README.md": {
       "path": "README.md",
       "language": "markdown",
-      "purpose": "README.md documentation: Calculator App`n`nThis is a simple calculator application for testing Repo-Map.",
-      "main_symbols": [],
-      "exports": [],
+      "purpose": "This is a lightweight calculator application initially built for Repo-Map testing, planned to be extended with multiplication and division operation support, local calculation history persistence capability, to improve usability and testability while ensuring original functions are not affected and adhering to lightweight product positioning",
+      "main_symbols": [
+        "run_app",
+        "Calculator",
+        "Calculator.__init__",
+        "Calculator.compute",
+        "add",
+        "subtract",
+        "setup_logger"
+      ],
+      "exports": [
+        "run_app",
+        "Calculator",
+        "add",
+        "subtract",
+        "setup_logger"
+      ],
       "keywords": [
-        "readme",
-        "md",
-        "Calculator App`n`nThis is a simple calculator application for testing Repo-Map."
+        "lightweight calculator",
+        "arithmetic operation extension",
+        "multiplication",
+        "division",
+        "calculation history persistence",
+        "local storage",
+        "backward compatibility",
+        "usability",
+        "testability",
+        "Repo-Map test"
       ],
       "depends_on": [],
       "size_bytes": 82,
-      "importance_score": -0.5,
-      "generated_at": "2026-04-28T08:33:32.612288+00:00"
+      "importance_score": 15.0,
+      "generated_at": "2026-05-02T17:26:41.341254+00:00",
+      "summary_mode": "llm"
     },
     "core/calculator.py": {
       "path": "core/calculator.py",
       "language": "python",
-      "purpose": "calculator module",
+      "purpose": "Implements the core Calculator class for the lightweight calculator application, providing arithmetic computation capabilities, operation type validation, and in-memory tracking of calculation history",
       "main_symbols": [
-        "compute"
+        "Calculator",
+        "Calculator.__init__",
+        "Calculator.compute"
       ],
       "exports": [
-        "compute"
+        "Calculator"
       ],
       "keywords": [
         "calculator",
-        "math"
+        "arithmetic computation",
+        "addition",
+        "subtraction",
+        "multiplication",
+        "division",
+        "computation history",
+        "operation validation",
+        "persistent storage",
+        "lightweight application",
+        "testability"
       ],
       "depends_on": [
-        "core/operations.py"
+        "testcode.core.operations.add",
+        "testcode.core.operations.subtract"
       ],
       "size_bytes": 448,
-      "importance_score": 2.65,
-      "generated_at": "2026-04-28T08:33:32.626368+00:00",
+      "importance_score": 5.8,
+      "generated_at": "2026-05-02T17:24:54.717143+00:00",
       "summary_mode": "llm"
     },
     "core/operations.py": {
       "path": "core/operations.py",
       "language": "python",
-      "purpose": "calculator module",
+      "purpose": "Provides stateless basic arithmetic operation implementations for the lightweight calculator, currently supporting addition and subtraction, to be extended with multiplication and division per new requirement",
       "main_symbols": [
-        "compute"
+        "add",
+        "subtract"
       ],
       "exports": [
-        "compute"
+        "add",
+        "subtract"
       ],
       "keywords": [
-        "calculator",
-        "math"
+        "arithmetic operation",
+        "addition",
+        "subtraction",
+        "lightweight calculator",
+        "calculation logic",
+        "stateless function"
       ],
-      "depends_on": [
-        "core/operations.py"
-      ],
+      "depends_on": [],
       "size_bytes": 117,
-      "importance_score": 2.15,
-      "generated_at": "2026-04-28T08:33:32.626630+00:00",
+      "importance_score": 4.5,
+      "generated_at": "2026-05-02T17:25:20.282839+00:00",
       "summary_mode": "llm"
     },
     "core/__init__.py": {
@@ -191,28 +276,32 @@
       "depends_on": [],
       "size_bytes": 0,
       "importance_score": -0.5,
-      "generated_at": "2026-04-28T08:33:32.616270+00:00"
+      "generated_at": "2026-05-02T17:24:26.027234+00:00"
     },
     "utils/logger.py": {
       "path": "utils/logger.py",
       "language": "python",
-      "purpose": "calculator module",
+      "purpose": "Provides pre-configured logging utility for the lightweight calculator application, supporting operation tracking, debugging, and audit capabilities during feature expansion",
       "main_symbols": [
-        "compute"
+        "setup_logger"
       ],
       "exports": [
-        "compute"
+        "setup_logger"
       ],
       "keywords": [
-        "calculator",
-        "math"
+        "logging",
+        "logger configuration",
+        "calculator debugging",
+        "stream handler",
+        "log formatting",
+        "operation auditing"
       ],
       "depends_on": [
-        "core/operations.py"
+        "logging"
       ],
       "size_bytes": 329,
       "importance_score": 2.65,
-      "generated_at": "2026-04-28T08:33:32.627218+00:00",
+      "generated_at": "2026-05-02T17:26:07.984245+00:00",
       "summary_mode": "llm"
     },
     "utils/__init__.py": {
@@ -229,10 +318,10 @@
       "depends_on": [],
       "size_bytes": 0,
       "importance_score": -0.5,
-      "generated_at": "2026-04-28T08:33:32.618406+00:00"
+      "generated_at": "2026-05-02T17:24:26.029610+00:00"
     }
   },
   "summary_mode": "llm_enriched",
-  "enriched_files": 4,
-  "candidate_files": 6
+  "enriched_files": 5,
+  "candidate_files": 7
 }

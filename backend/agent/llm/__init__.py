@@ -1,34 +1,43 @@
-"""
-LLM Provider 多服务商实现
+"""LLM Provider 统一入口。
 
-该模块提供统一的 LLM Provider 接口，支持多种大模型服务商：
-- 字节豆包 (Doubao)
-- 阿里通义千问 (Qwen)
-- OpenAI 兼容接口
-
-架构设计：
-1. BaseLLMProvider: 定义统一的抽象接口
-2. LLMFactory: 根据配置动态创建 Provider 实例
-3. 各 Provider 实现: 继承 BaseLLMProvider，实现具体调用逻辑
-
-使用方式：
-```python
-from agent.llm import LLMFactory
-
-# 通过工厂创建 Provider
-llm = LLMFactory.create("doubao")
-
-# 或者直接使用
-from agent.llm.providers import DoubaoProvider
-llm = DoubaoProvider()
-```
+推荐优先使用这里导出的 create_llm / default_llm / chat_with_llm。
 """
 
 from .base import BaseLLMProvider, LLMConfig
+from .config import get_default_config_dict, load_config, save_config
 from .factory import LLMFactory
+from .providers import DoubaoProvider, OpenAICompatibleProvider, QwenProvider
+from .service import (
+    DEFAULT_PROVIDER,
+    chat_with_doubao,
+    chat_with_llm,
+    create_llm,
+    default_llm,
+    get_default_llm,
+    get_llm_config,
+    llm,
+    stream_chat_with_doubao,
+    stream_chat_with_llm,
+)
 
 __all__ = [
     "BaseLLMProvider",
     "LLMConfig",
     "LLMFactory",
+    "DoubaoProvider",
+    "QwenProvider",
+    "OpenAICompatibleProvider",
+    "load_config",
+    "save_config",
+    "get_default_config_dict",
+    "DEFAULT_PROVIDER",
+    "get_llm_config",
+    "create_llm",
+    "get_default_llm",
+    "default_llm",
+    "llm",
+    "chat_with_llm",
+    "stream_chat_with_llm",
+    "chat_with_doubao",
+    "stream_chat_with_doubao",
 ]

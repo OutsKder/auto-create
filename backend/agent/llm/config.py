@@ -1,7 +1,7 @@
 """
 LLM 配置文件管理
 
-支持从环境变量和配置文件两种方式加载 LLM 配置
+支持从配置文件和环境变量两种方式加载 LLM 配置
 
 使用方式：
 ```python
@@ -20,12 +20,12 @@ save_config("doubao", config, config_file="config/llm.yaml")
 
 import os
 import json
+import re
 import yaml
 from typing import Dict, Any, Optional
 from pathlib import Path
 
 from .base import LLMConfig
-
 
 DEFAULT_CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config"
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "llm.yaml"
@@ -74,11 +74,27 @@ def load_config_from_env(provider: str) -> Dict[str, Any]:
     return {k: v for k, v in config.items() if v is not None}
 
 
+_ENV_PLACEHOLDER_PATTERN = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
+
+
+def _resolve_placeholder(value: Any) -> Any:
+    """把 ${VAR} 形式的占位符替换为环境变量值。"""
+
+    if not isinstance(value, str):
+        return value
+
+    match = _ENV_PLACEHOLDER_PATTERN.match(value.strip())
+    if not match:
+        return value
+
+    return os.environ.get(match.group(1))
+
+
 def load_config(provider: str, config_file: Optional[str] = None) -> LLMConfig:
     """
     加载 LLM 配置
 
-    优先级：环境变量 > 配置文件 > 默认值
+    优先级：配置文件 > 环境变量 > 默认值
 
     Args:
         provider: Provider 类型
@@ -89,10 +105,8 @@ def load_config(provider: str, config_file: Optional[str] = None) -> LLMConfig:
     """
     config_path = Path(config_file) if config_file else DEFAULT_CONFIG_FILE
 
-    # 优先从环境变量加载
-    config_dict = load_config_from_env(provider)
-
     # 如果有配置文件，合并配置
+    config_dict: Dict[str, Any] = {"provider": provider}
     if config_path.exists():
         with open(config_path, "r", encoding="utf-8") as f:
             if config_path.suffix in [".yaml", ".yml"]:
@@ -102,12 +116,18 @@ def load_config(provider: str, config_file: Optional[str] = None) -> LLMConfig:
             else:
                 file_configs = {}
 
-            # 合并配置（环境变量优先级更高）
             if provider in file_configs:
                 provider_config = file_configs[provider]
                 for key, value in provider_config.items():
-                    if key not in config_dict or config_dict[key] is None:
+                    value = _resolve_placeholder(value)
+                    if value is not None:
                         config_dict[key] = value
+
+    # 再用环境变量补齐配置文件没有提供的字段
+    env_config = load_config_from_env(provider)
+    for key, value in env_config.items():
+        if key not in config_dict or config_dict[key] is None:
+            config_dict[key] = value
 
     return LLMConfig(**config_dict)
 

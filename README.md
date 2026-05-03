@@ -1,33 +1,24 @@
 # auto-create
 
-## Step2 Retrieval Gate
+## Agent Runtime
 
-- Quick gate (minimal deterministic checks):
+The Agent implementation lives in `backend/agent`.
 
-```bash
-python backend/agent/run_step2_gate.py
+Current runtime boundaries:
+
+```text
+Agents produce structured artifacts.
+Workflows perform side effects.
+Coordinators orchestrate retries and decisions.
 ```
 
-- Run baseline evaluation only (Recall/Coverage/Latency):
+Primary package imports:
 
-```bash
-python backend/agent/run_step2_eval.py
+```python
+from backend.agent import RequirementAnalyst, TechArchitect
+from backend.agent.agents import CodeGeneratorAgent, SDETAgent, SeniorReviewerAgent
+from backend.agent.codegen import TestingWorkflow
+from backend.agent.self_healing import SelfHealingCoordinator
 ```
 
-- Gate with baseline evaluation:
-
-```bash
-python backend/agent/run_step2_gate.py --with-eval
-```
-
-- Full gate (minimal checks + end-to-end chain):
-
-```bash
-python backend/agent/run_step2_gate.py --with-e2e
-```
-
-- Full gate with evaluation (minimal + eval + e2e):
-
-```bash
-python backend/agent/run_step2_gate.py --with-eval --with-e2e
-```
+See `backend/agent/README.md` for the trimmed Agent module structure.

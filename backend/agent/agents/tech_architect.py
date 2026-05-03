@@ -13,16 +13,16 @@
 """
 
 from typing import List, Dict, Any, Optional, Tuple
-from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+import logging
 import os
-import glob
 import time
 import re
 
 from ..base import BaseAgent, AgentConfig
 from ..callbacks import TraceCallbackHandler
+from ..contracts import CodebaseContext, Design, FileChangePlan, TechArchitectInput
 from ..tools.codebase_context import CodebaseContextTool
 from ..prompts.tech_architect import (
     TECH_ARCHITECT_SYSTEM_PROMPT,
@@ -34,25 +34,19 @@ from ..prompts.common import (
 )
 
 
-class FileChangePlan(BaseModel):
-    file_path: str = Field(description="文件路径")
-    change_type: str = Field(description="变更类型: Create, Modify, Delete")
-    description: str = Field(description="变更描述")
-
-
-class Design(BaseModel):
-    architecture: str = Field(description="架构设计描述")
-    api_design: str = Field(description="API 设计描述")
-    file_change_plan: List[FileChangePlan] = Field(description="文件变更计划")
-    risk_analysis: str = Field(description="风险分析")
-
-
 class TechArchitect(BaseAgent):
     """方案设计 Agent - 扮演高级架构师"""
+
+    input_model = TechArchitectInput
+    output_key = "design"
+    output_model = Design
 
     def __init__(self, llm_provider: Any, config: Optional[AgentConfig] = None):
         super().__init__(llm_provider, config)
         self.parser = PydanticOutputParser(pydantic_object=Design)
+        self.logger = logging.getLogger(
+            f"{self.__class__.__module__}.{self.__class__.__name__}"
+        )
 
     def get_input_keys(self) -> List[str]:
         return ["requirement_structured"]
@@ -71,22 +65,13 @@ class TechArchitect(BaseAgent):
         4. 解析失败时触发重试自愈
         5. 返回增量 context
         """
-        requirement_structured = context.get("requirement_structured")
-        if not requirement_structured:
-            raise ValueError("context 中缺少 requirement_structured")
+        self._validate_input(context)
+        self.logger.info("TechArchitect.execute started")
+        typed_input = self.input_model.model_validate(self._select_input_payload(context))
+        requirement_structured = typed_input.requirement_structured.model_dump()
 
-        # 从 context 中获取代码库上下文
-        # 如果没有提供，使用默认路径
-        codebase_dict = context.get("codebase", {})
-        codebase_path = codebase_dict.get("repo_path")
-        if not codebase_path:
-            # 如果没有提供代码库路径，使用默认路径
-            codebase_path = os.path.join(
-                os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                ),
-                "testcode",
-            )
+        codebase_path = typed_input.codebase.repo_path
+        self.logger.info("Extracting codebase context; repo_path=%s", codebase_path)
 
         # 挂载新版工具
         print(
@@ -99,6 +84,11 @@ class TechArchitect(BaseAgent):
         step2_start = time.perf_counter()
         codebase_context_obj = tool.extract_context(context=context, query=query)
         step2_elapsed = time.perf_counter() - step2_start
+        self.logger.info(
+            "Codebase context extraction completed; elapsed=%.2fs; hot_files=%d",
+            step2_elapsed,
+            len(codebase_context_obj.get("hot_files", [])),
+        )
         print(
             f"[TechArchitect] Context Tool 完成，耗时 {step2_elapsed:.2f}s，hot_files={len(codebase_context_obj.get('hot_files', []))}"
         )
@@ -107,6 +97,9 @@ class TechArchitect(BaseAgent):
         coverage_report = codebase_context_obj.get("coverage_report", {})
         uncovered_points = coverage_report.get("uncovered_points", [])
         if uncovered_points:
+            self.logger.error(
+                "Coverage gate failed; uncovered_points=%s", uncovered_points[:5]
+            )
             raise RuntimeError(
                 "Step2 覆盖率门禁未通过，仍存在未覆盖需求点："
                 + "；".join(uncovered_points[:5])
@@ -123,18 +116,28 @@ class TechArchitect(BaseAgent):
         tracer = TraceCallbackHandler()
 
         try:
+            self.logger.info("Invoking LLM for technical design")
             response = self._invoke_llm(
                 requirement_structured, codebase_context_str, tracer
             )
+            self.logger.debug(
+                "LLM response received for technical design; response_type=%s",
+                type(response).__name__,
+            )
             result = self._parse_response(response, tracer)
         except Exception as e:
+            self.logger.exception("Fatal error during TechArchitect execution")
             raise RuntimeError(f"TechArchitect 执行过程中发生致命错误: {str(e)}")
 
-        return {
+        output = {
             "codebase_context": codebase_context_obj,  # 将上下文放入 Pipeline Context 返回
-            "design": result.dict(),
+            "design": result.model_dump(),
             "meta_trace": tracer.meta_info,
         }
+        CodebaseContext.model_validate(output["codebase_context"])
+        self._validate_output(output)
+        self.logger.info("TechArchitect.execute completed successfully")
+        return output
 
     def _compact_context_for_llm(
         self, codebase_context: Dict[str, Any], requirement_structured: Dict[str, Any]
@@ -400,15 +403,24 @@ class TechArchitect(BaseAgent):
             format_instructions=self.parser.get_format_instructions(),
         )
 
+        self.logger.debug(
+            "Submitting design prompt to LLM; prompt_length=%d", len(str(_input))
+        )
         response = self.llm.invoke(_input, config={"callbacks": [tracer]})
-        tracer.print_trace_report()
+        self.logger.info("LLM invocation complete for technical design")
+        try:
+            tracer.print_trace_report()
+        except Exception:
+            self.logger.debug("Trace printing failed for TechArchitect")
         return response
 
     def _parse_response(self, response: Any, tracer: TraceCallbackHandler) -> Design:
         """解析 LLM 响应，失败时触发重试"""
         try:
+            self.logger.debug("Parsing LLM response into Design")
             return self.parser.parse(response.content)
         except Exception as parse_e:
+            self.logger.warning("Design parse failed, attempting retry fix: %s", parse_e)
             print(f"[TechArchitect] 解析失败，触发 Retry 容错自愈... ({parse_e})")
             return self._retry_with_fix(response.content, parse_e, tracer)
 
@@ -429,10 +441,15 @@ class TechArchitect(BaseAgent):
         )
 
         retry_tracer = TraceCallbackHandler()
+        self.logger.info("Invoking LLM for TechArchitect retry/fix")
         retry_response = self.llm.invoke(
             retry_input, config={"callbacks": [retry_tracer]}
         )
-        retry_tracer.print_trace_report()
+        try:
+            retry_tracer.print_trace_report()
+        except Exception:
+            self.logger.debug("Retry trace print failed for TechArchitect")
         tracer.meta_info.update({"retry_meta": retry_tracer.meta_info})
 
+        self.logger.info("Retry parsing succeeded for TechArchitect")
         return self.parser.parse(retry_response.content)

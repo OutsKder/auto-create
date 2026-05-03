@@ -12,8 +12,9 @@ from __future__ import annotations
 import subprocess
 import shlex
 import os
+import re
 from typing import List, Optional, Sequence
-from .models import SandboxResult
+from ..contracts import SandboxResult
 
 
 class Runner:
@@ -46,13 +47,35 @@ class Runner:
     def _run_locally(self, commands: List[str], repo_path: str) -> SandboxResult:
         logs = []
         for cmd in commands:
-            proc = subprocess.run(
-                shlex.split(cmd),
-                cwd=repo_path,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            )
+            compat_result = self._run_windows_compat_command(cmd, repo_path)
+            if compat_result is not None:
+                logs.append(compat_result.logs)
+                if not compat_result.passed:
+                    return SandboxResult(
+                        passed=False,
+                        exit_code=compat_result.exit_code,
+                        logs="\n".join(logs),
+                    )
+                continue
+
+            if os.name == "nt":
+                proc = subprocess.run(
+                    cmd,
+                    shell=True,
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                )
+            else:
+                proc = subprocess.run(
+                    cmd,
+                    shell=True,
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                )
             logs.append(
                 f"$ {cmd}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}\nexit:{proc.returncode}\n"
             )
@@ -62,6 +85,77 @@ class Runner:
                 )
 
         return SandboxResult(passed=True, exit_code=0, logs="\n".join(logs))
+
+    def _run_windows_compat_command(
+        self, cmd: str, repo_path: str
+    ) -> Optional[SandboxResult]:
+        if os.name != "nt":
+            return None
+
+        if "git diff --name-only" not in cmd:
+            return None
+
+        if "grep -qv" in cmd and "exit 1" in cmd:
+            return self._evaluate_git_diff_filter_check(cmd, repo_path, quiet=True)
+
+        if "grep -v" in cmd and "wc -l" in cmd:
+            return self._evaluate_git_diff_filter_check(cmd, repo_path, quiet=False)
+
+        if "grep -v" in cmd and "test -z" in cmd:
+            return self._evaluate_git_diff_filter_check(cmd, repo_path, quiet=False)
+
+        return None
+
+    def _evaluate_git_diff_filter_check(
+        self, cmd: str, repo_path: str, quiet: bool
+    ) -> SandboxResult:
+        diff_args = ["git", "diff", "--name-only"]
+        if "HEAD~1 HEAD" in cmd:
+            diff_args.extend(["HEAD~1", "HEAD"])
+        elif "HEAD" in cmd:
+            diff_args.append("HEAD")
+
+        diff_proc = subprocess.run(
+            diff_args,
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=self.timeout,
+        )
+        changed_files = [
+            line.strip() for line in diff_proc.stdout.splitlines() if line.strip()
+        ]
+
+        pattern_match = re.search(r"grep\s+-q?v\s+'([^']+)'", cmd)
+        if not pattern_match:
+            return SandboxResult(passed=False, exit_code=1, logs=f"$ {cmd}\nexit:1\n")
+
+        pattern = re.compile(pattern_match.group(1))
+        filtered_files = [path for path in changed_files if not pattern.search(path)]
+
+        if quiet:
+            if filtered_files:
+                error_line = next(
+                    (segment for segment in cmd.split("&&") if "echo" in segment), ""
+                )
+                return SandboxResult(
+                    passed=False,
+                    exit_code=1,
+                    logs=f"$ {cmd}\nstdout:\n\nstderr:\n{error_line.strip()}\nexit:1\n",
+                )
+            ok_line = cmd.split("||")[-1].strip() if "||" in cmd else ""
+            return SandboxResult(
+                passed=True,
+                exit_code=0,
+                logs=f"$ {cmd}\nstdout:\n{ok_line}\nstderr:\nexit:0\n",
+            )
+
+        exit_code = 0 if len(filtered_files) == 0 else 1
+        return SandboxResult(
+            passed=(exit_code == 0),
+            exit_code=exit_code,
+            logs=f"$ {cmd}\nstdout:\n{len(filtered_files)}\nstderr:\nexit:{exit_code}\n",
+        )
 
     def _run_in_docker(
         self, commands: List[str], repo_path: str, sandbox_config: dict

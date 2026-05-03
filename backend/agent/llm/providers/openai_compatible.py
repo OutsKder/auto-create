@@ -24,9 +24,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
-
-from ..base import BaseLLMProvider, LLMConfig
+from ..base import BaseLLMProvider, LLMConfig, LLMResponse
 
 
 class OpenAICompatibleProvider(BaseLLMProvider):
@@ -82,47 +80,41 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             )
         return self._client
 
-    def invoke(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
+    def invoke(self, messages: List[Dict[str, str]], **kwargs) -> LLMResponse:
         """同步调用 OpenAI 兼容 LLM"""
         try:
             langchain_messages = self._convert_messages(messages)
 
-            temperature = kwargs.get("temperature", self.config.temperature)
-            max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
-
-            client = self._get_client()
+            client = self._bind_runtime_options(self._get_client(), kwargs)
             response = client.invoke(
                 langchain_messages,
-                config={"temperature": temperature, "max_tokens": max_tokens},
+                config=self._get_runnable_config(kwargs),
             )
 
             return self._parse_response(response)
 
         except Exception as e:
-            return {
-                "content": f"请求失败: {str(e)}",
-                "error": str(e),
-                "usage": {
+            return LLMResponse(
+                content=f"请求失败: {str(e)}",
+                error=str(e),
+                usage={
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
                     "total_tokens": 0,
                 },
-                "model": self.get_model_name(),
-            }
+                model=self.get_model_name(),
+            )
 
     def stream(self, messages: List[Dict[str, str]], **kwargs):
         """流式调用 OpenAI 兼容 LLM"""
         try:
             langchain_messages = self._convert_messages(messages)
 
-            temperature = kwargs.get("temperature", self.config.temperature)
-            max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
-
-            client = self._get_client()
+            client = self._bind_runtime_options(self._get_client(), kwargs)
 
             for chunk in client.stream(
                 langchain_messages,
-                config={"temperature": temperature, "max_tokens": max_tokens},
+                config=self._get_runnable_config(kwargs),
             ):
                 if chunk.content:
                     yield chunk.content
@@ -136,21 +128,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     def _convert_messages(self, messages: List[Dict[str, str]]) -> List:
         """转换消息格式"""
-        result = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
+        return self._normalize_messages(messages)
 
-            if role == "system":
-                result.append(SystemMessage(content=content))
-            elif role == "user":
-                result.append(HumanMessage(content=content))
-            else:
-                result.append(HumanMessage(content=content))
-
-        return result
-
-    def _parse_response(self, response) -> Dict[str, Any]:
+    def _parse_response(self, response) -> LLMResponse:
         """解析 LangChain 响应"""
         content = response.content if hasattr(response, "content") else str(response)
 
@@ -160,13 +140,13 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             if isinstance(metadata, dict) and "token_usage" in metadata:
                 usage = metadata["token_usage"]
 
-        return {
-            "content": content,
-            "usage": usage,
-            "model": self.get_model_name(),
-            "response_metadata": (
+        return LLMResponse(
+            content=content,
+            usage=usage,
+            model=self.get_model_name(),
+            response_metadata=(
                 response.response_metadata
                 if hasattr(response, "response_metadata")
                 else {}
             ),
-        }
+        )

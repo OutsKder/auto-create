@@ -10,8 +10,7 @@ except ImportError:
     from backend.agent.agents.requirement_analyst import RequirementAnalyst
 
 try:
-    # 复用已有的 ChatOpenAI 实例，保持与 test_requirement_analyst.py 一致的调用契约
-    from backend.doubao_llm import llm as default_llm
+    from backend.agent.llm import default_llm
 except ImportError:
     from doubao_llm import llm as default_llm
 
@@ -74,6 +73,7 @@ def run_agent_stages(pipeline_id: str) -> Pipeline:
 
 import time
 
+
 def _run_auto_agent_stages(pipeline: Pipeline) -> None:
     """循环执行所有阶段，有Agent的执行Agent，无Agent的模拟执行，完成后自动进入审批。"""
     safety_limit = max(len(pipeline.stages) * 2, 1)
@@ -99,7 +99,7 @@ def _run_auto_agent_stages(pipeline: Pipeline) -> None:
             print(f"模拟执行阶段: {stage.name} (id: {stage.id})，3秒后自动完成...")
             time.sleep(3)
             print(f"阶段 {stage.name} 模拟执行完成")
-        
+
         # 所有阶段执行完成后自动标记完成，进入审批状态
         stage_done(pipeline.id)
 
@@ -147,7 +147,9 @@ def approve(pipeline_id: str, checkpoint_id: str | None = None) -> Pipeline:
     return pipeline
 
 
-def reject(pipeline_id: str, checkpoint_id: str | None = None, note: str = "") -> Pipeline:
+def reject(
+    pipeline_id: str, checkpoint_id: str | None = None, note: str = ""
+) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
     pipeline.reject(checkpoint_id=checkpoint_id, note=note)
     return pipeline
@@ -209,11 +211,11 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
     # 处理当前阶段逻辑：有Agent就执行
     if current_stage.id in _AUTO_AGENT_STAGE_IDS:
         _execute_current_stage_agent(pipeline)
-    
+
     # 完成当前阶段
     current_stage.mark_done()
     pipeline.checkpoint_for_current_stage()
-    
+
     # 调试模式：自动审批并推进到下一个阶段
     checkpoint = pipeline.current_checkpoint()
     pipeline.approve(checkpoint.id)
@@ -221,7 +223,9 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
     return pipeline
 
 
-def emit_event(event_type: EventType, pipeline_id: str, checkpoint_id: str | None = None) -> Pipeline:
+def emit_event(
+    event_type: EventType, pipeline_id: str, checkpoint_id: str | None = None
+) -> Pipeline:
     if event_type == EventType.CREATE_PIPELINE:
         return create_pipeline()
     if event_type == EventType.RUN_PIPELINE:

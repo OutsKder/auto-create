@@ -43,12 +43,13 @@ class TriageAgent:
         code_changes = context.get("code_changes", "")
         previous_failures = context.get("previous_failures", [])
 
-        logs = sandbox_result.logs if sandbox_result else ""
-        stderr = self._extract_stderr(logs)
-        stdout = self._extract_stdout(logs)
-
-        # 1. 解析日志，提取错误信息
-        error_info = self._parse_error(stderr, stdout)
+        # 1. 优先使用结构化失败信息，其次回退到日志解析
+        error_info = self._build_error_info(sandbox_result)
+        if not error_info:
+            logs = sandbox_result.logs if sandbox_result else ""
+            stderr = self._extract_stderr(logs)
+            stdout = self._extract_stdout(logs)
+            error_info = self._parse_error(stderr, stdout)
 
         # 2. 识别错误类型
         error_type = self._classify_error(error_info)
@@ -89,6 +90,45 @@ class TriageAgent:
             "fix_suggestion": suggestion,
             "retry_decision": error_type != ErrorType.UNRECOVERABLE,
             "reason": f"错误类型: {error_type.value}, 置信度: {confidence:.1%}",
+        }
+
+    def _build_error_info(self, sandbox_result) -> dict:
+        if not sandbox_result:
+            return {}
+
+        structured_fields = {
+            "failure_stage": getattr(sandbox_result, "failure_stage", None),
+            "failure_type": getattr(sandbox_result, "failure_type", None),
+            "failure_message": getattr(sandbox_result, "failure_message", None),
+            "failure_context": getattr(sandbox_result, "failure_context", {}) or {},
+            "failed_patches": getattr(sandbox_result, "failed_patches", []) or [],
+            "failed_command": getattr(sandbox_result, "failed_command", None),
+        }
+
+        if not any(structured_fields.values()):
+            return {}
+
+        failure_message = structured_fields.get("failure_message") or getattr(
+            sandbox_result, "logs", ""
+        )
+        failure_context = structured_fields.get("failure_context") or {}
+        failed_patches = structured_fields.get("failed_patches") or []
+
+        code_snippet = ""
+        if failed_patches:
+            first = failed_patches[0]
+            code_snippet = first.get("patch", "") or first.get("message", "")
+
+        return {
+            "message": failure_message,
+            "code_snippet": code_snippet,
+            "traceback": failure_message,
+            "full_log": getattr(sandbox_result, "logs", ""),
+            "failure_stage": structured_fields.get("failure_stage"),
+            "failure_type": structured_fields.get("failure_type"),
+            "failure_context": failure_context,
+            "failed_patches": failed_patches,
+            "failed_command": structured_fields.get("failed_command"),
         }
 
     def _extract_stderr(self, logs: str) -> str:

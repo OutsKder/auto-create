@@ -16,11 +16,16 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from ..base import BaseAgent, AgentConfig
+from ..contracts import CodeGeneratorInput, DiffBundle
 from ..codegen.code_generator import CodeGeneratorAgent as CoreCodeGeneratorAgent
 
 
 class CodeGeneratorAgent(BaseAgent):
     """代码生成 Agent 的对外入口。"""
+
+    input_model = CodeGeneratorInput
+    output_key = "code_diff"
+    output_model = DiffBundle
 
     def __init__(
         self,
@@ -51,4 +56,6 @@ class CodeGeneratorAgent(BaseAgent):
             repo_root=repo_path,
             config=self.config,
         )
-        return core_agent.execute(context)
+        result = core_agent.execute(context)
+        self._validate_output(result)
+        return result

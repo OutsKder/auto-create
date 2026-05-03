@@ -2,6 +2,7 @@ import sys
 from core.calculator import Calculator
 from utils.logger import setup_logger
 
+
 def run_app():
     logger = setup_logger()
     calc = Calculator()
