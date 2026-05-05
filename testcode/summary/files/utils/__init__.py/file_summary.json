@@ -1,0 +1,16 @@
+{
+  "path": "utils/__init__.py",
+  "language": "python",
+  "purpose": "Module about utils",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "utils",
+    "init",
+    "py"
+  ],
+  "depends_on": [],
+  "size_bytes": 0,
+  "importance_score": -0.5,
+  "generated_at": "2026-05-02T17:24:26.029610+00:00"
+}

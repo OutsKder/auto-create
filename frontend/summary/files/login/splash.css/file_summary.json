@@ -1,0 +1,16 @@
+{
+  "path": "login/splash.css",
+  "language": "css",
+  "purpose": "Module about login",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "login",
+    "splash",
+    "css"
+  ],
+  "depends_on": [],
+  "size_bytes": 4140,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.350647+00:00"
+}

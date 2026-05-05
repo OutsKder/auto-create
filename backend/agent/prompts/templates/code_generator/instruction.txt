@@ -1,0 +1,28 @@
+请输出一个严格的 JSON 对象，结构如下：
+{
+  "stage": "coding",
+  "mode": "diff_bundle",
+  "files_changed": ["..."],
+  "patches": [
+    {
+      "file_path": "...",
+      "change_type": "create|modify|delete",
+      "patch_format": "search_replace|full_content",
+      "patch": "...",
+      "reason": "...",
+      "risk_level": "low|medium|high"
+    }
+  ],
+  "diff": "...",
+  "validation": {
+    "static_checks": ["syntax", "format", "targeted_lint"],
+    "runtime_checks": []
+  }
+}
+
+要求：
+- 如果某个文件是删除动作，patch 可为空字符串，但仍需说明原因。
+- 如果某个文件是新增动作，patch_format 必须为 full_content，patch 中必须给出目标文件的完整内容。
+- 如果某个文件是修改动作，patch_format 必须为 search_replace，patch 中必须使用 SEARCH/REPLACE 协议。
+- diff 字段可给出 git diff 风格文本，也可以在首次实现阶段留空字符串，但不能省略字段。
+- 保持内容最小化、精确化，避免顺手重构。

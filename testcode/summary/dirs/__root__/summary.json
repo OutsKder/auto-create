@@ -1,0 +1,43 @@
+{
+  "dir": ".",
+  "dir_name": "repo root",
+  "purpose": "Repository root index",
+  "key_files": [
+    "README.md",
+    "main.py"
+  ],
+  "exports": [
+    "run_app",
+    "Calculator",
+    "add",
+    "subtract",
+    "setup_logger"
+  ],
+  "depends_on": [
+    "sys",
+    "core.calculator",
+    "utils.logger"
+  ],
+  "keywords": [
+    "lightweight calculator",
+    "arithmetic operation extension",
+    "multiplication",
+    "division",
+    "calculation history persistence",
+    "local storage",
+    "backward compatibility",
+    "usability",
+    "testability",
+    "Repo-Map test",
+    "application entry point",
+    "arithmetic computation",
+    "logger initialization",
+    "multiplication extension",
+    "division extension",
+    "lightweight design",
+    "testability improvement"
+  ],
+  "file_count": 2,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-02T17:26:41.344069+00:00"
+}

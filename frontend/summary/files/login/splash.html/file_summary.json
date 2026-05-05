@@ -1,0 +1,17 @@
+{
+  "path": "login/splash.html",
+  "language": "html",
+  "purpose": "login/splash.html documentation: 织界引擎",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "login",
+    "splash",
+    "html",
+    "织界引擎"
+  ],
+  "depends_on": [],
+  "size_bytes": 1356,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.351585+00:00"
+}

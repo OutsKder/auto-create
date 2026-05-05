@@ -1,0 +1,29 @@
+{
+  "dir": "utils",
+  "dir_name": "utils",
+  "purpose": "Folder centered on setup_logger",
+  "key_files": [
+    "utils/logger.py",
+    "utils/__init__.py"
+  ],
+  "exports": [
+    "setup_logger"
+  ],
+  "depends_on": [
+    "logging"
+  ],
+  "keywords": [
+    "logging",
+    "logger configuration",
+    "calculator debugging",
+    "stream handler",
+    "log formatting",
+    "operation auditing",
+    "utils",
+    "init",
+    "py"
+  ],
+  "file_count": 2,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-02T17:26:41.346018+00:00"
+}

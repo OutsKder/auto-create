@@ -1,0 +1,26 @@
+{
+  "requirement_raw": "为现有轻量计算器项目增加一组可用性与可测试性功能：\n1) 新增乘法(mul)和除法(div)操作；\n2) 增加历史持久化；\n3) 增加一个图形界面。",
+  "codebase": {
+    "repo_path": "testcode",
+    "repo_id": "testcode",
+    "repo_name": "testcode",
+    "branch": "main"
+  },
+  "provider": "doubao",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8012
+  },
+  "timeouts": {
+    "startup_seconds": 45,
+    "step_seconds": 300
+  },
+  "approval_notes": {
+    "analysis": "需求分析通过，继续进入方案设计。",
+    "design": "方案设计通过，继续进入代码生成。",
+    "coding": "代码生成通过，继续进入测试生成。",
+    "testing": "测试结果可接受，继续进入代码评审。",
+    "review": "评审通过，继续进入交付集成。",
+    "delivery": "交付确认，流程结束。"
+  }
+}

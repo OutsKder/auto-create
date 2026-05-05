@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API First 流程演示</title>
+  <link rel="stylesheet" href="./api_first_demo.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">API FIRST DEMO</p>
+        <h1>FastAPI 审批流演示</h1>
+        <p class="subhead">输入需求，点击创建并启动，系统会真实调用 agent，阶段停住后你可以手动批准或拒绝。</p>
+      </div>
+      <div class="endpoint-card">
+        <label>FastAPI Base URL</label>
+        <input id="baseUrl" type="text" value="http://127.0.0.1:8010" />
+        <button id="connectBtn" type="button">连接并刷新</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <div class="card-head">
+          <h2>1. 需求输入</h2>
+          <span id="connectionStatus" class="badge">未连接</span>
+        </div>
+        <textarea id="requirementInput" rows="8" placeholder="例如：为轻量计算器增加乘法、除法、历史记录和图形界面"></textarea>
+        <div class="actions">
+          <button id="createBtn" class="primary" type="button">创建并启动流程</button>
+          <button id="refreshBtn" type="button">刷新状态</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>2. 当前状态</h2>
+          <span id="pipelineId" class="muted">Pipeline: -</span>
+        </div>
+        <div id="statusSummary" class="status-summary">等待创建流程</div>
+        <div class="mini-stats">
+          <div><span>阶段</span><strong id="currentStage">-</strong></div>
+          <div><span>审批点</span><strong id="currentCheckpoint">-</strong></div>
+          <div><span>下一步</span><strong id="nextAction">-</strong></div>
+        </div>
+      </section>
+
+      <section class="card card-wide">
+        <div class="card-head">
+          <h2>3. 阶段输出</h2>
+          <div class="actions compact">
+            <button id="approveBtn" class="primary" type="button" disabled>批准当前阶段</button>
+            <button id="rejectBtn" type="button" disabled>驳回当前阶段</button>
+          </div>
+        </div>
+        <div id="stageOutputs" class="stage-list"></div>
+      </section>
+
+      <section class="card card-wide">
+        <div class="card-head">
+          <h2>4. 流程事件</h2>
+          <span class="muted">按时间顺序记录创建、运行、审批、结果</span>
+        </div>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./api_first_demo.js"></script>
+</body>
+</html>

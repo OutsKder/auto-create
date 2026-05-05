@@ -1,0 +1,17 @@
+{
+  "path": "index.html",
+  "language": "html",
+  "purpose": "index.html documentation: 织界引擎",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "index",
+    "html",
+    "织界引擎",
+    "新建需求"
+  ],
+  "depends_on": [],
+  "size_bytes": 8533,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.329115+00:00"
+}

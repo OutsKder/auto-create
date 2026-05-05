@@ -1,0 +1,25 @@
+{
+  "path": "login/splash.js",
+  "language": "javascript",
+  "purpose": "login/splash.js exposes function skipSplash, function navigateToLogin",
+  "main_symbols": [
+    "function skipSplash",
+    "function navigateToLogin"
+  ],
+  "exports": [
+    "skipSplash",
+    "navigateToLogin"
+  ],
+  "keywords": [
+    "login",
+    "splash",
+    "js",
+    "function",
+    "skipsplash",
+    "navigatetologin"
+  ],
+  "depends_on": [],
+  "size_bytes": 425,
+  "importance_score": 5.0,
+  "generated_at": "2026-04-28T11:42:29.352317+00:00"
+}

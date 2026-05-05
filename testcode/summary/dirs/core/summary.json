@@ -1,0 +1,41 @@
+{
+  "dir": "core",
+  "dir_name": "core",
+  "purpose": "Folder centered on Calculator",
+  "key_files": [
+    "core/calculator.py",
+    "core/operations.py",
+    "core/__init__.py"
+  ],
+  "exports": [
+    "Calculator",
+    "add",
+    "subtract"
+  ],
+  "depends_on": [
+    "testcode.core.operations"
+  ],
+  "keywords": [
+    "calculator",
+    "arithmetic computation",
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division",
+    "computation history",
+    "operation validation",
+    "persistent storage",
+    "lightweight application",
+    "testability",
+    "arithmetic operation",
+    "lightweight calculator",
+    "calculation logic",
+    "stateless function",
+    "core",
+    "init",
+    "py"
+  ],
+  "file_count": 3,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-02T17:26:41.345095+00:00"
+}

@@ -1,0 +1,236 @@
+{
+  "requirement_structured": {
+    "is_clear": true,
+    "clarifying_questions": [],
+    "goal": "为现有轻量计算器扩展乘法、除法运算能力，新增计算历史本地持久化功能，提升产品的可用性与可测试性，保障原有功能不受影响，符合轻量产品的定位要求",
+    "features": [
+      "新增乘法（mul）运算功能，支持整数、负数、小数的多因子乘法计算，返回符合预设精度要求的计算结果",
+      "新增除法（div）运算功能，支持整数、负数、小数的除法计算，对除数为0的异常场景做友好提示，避免程序崩溃",
+      "新增计算历史持久化功能，自动存储每次计算的运算表达式、计算结果、计算时间，数据本地落盘，应用重启后不丢失",
+      "新增历史记录管理能力，支持用户查看全量历史记录、一键清空历史记录",
+      "为新增的mul、div运算模块提供标准化可测试接口，支持单元测试用例直接调用，满足可测试性要求"
+    ],
+    "constraints": [
+      "完全兼容现有轻量计算器的所有原有功能，不得影响已有的加法、减法运算逻辑与交互体验",
+      "新增运算功能的精度规则、交互逻辑与原有加减运算保持一致，不额外增加用户学习成本",
+      "历史持久化存储占用的本地存储空间不得超过1MB，超出时自动淘汰最早的历史记录",
+      "所有新增功能不得导致应用包体积增量超过50KB，符合轻量计算器的产品定位",
+      "除法运算遇到除数为0场景时必须返回友好提示，不得出现程序崩溃、无响应问题"
+    ],
+    "acceptance_criteria": [
+      "乘法功能验收：整数、负数、小数乘法计算结果准确，例如输入2*3*4返回24、-2.5*4返回-10，符合预设精度要求",
+      "除法功能验收：除法计算结果准确，例如输入10/2返回5、10/3的小数位数与现有运算精度一致，输入除数为0时弹出友好提示「除数不能为0」，程序正常运行不崩溃",
+      "历史持久化验收：每次计算完成后自动生成历史记录，关闭应用再重启后历史记录完整无丢失，支持查看所有历史的表达式、结果、计算时间",
+      "可测试性验收：mul、div模块对外提供独立可调用的接口，单元测试覆盖率不低于90%，可通过接口直接传入参数验证运算逻辑正确性",
+      "兼容性验收：原有加法、减法运算功能完全正常，无回归问题，新增功能交互风格与原有产品完全统一",
+      "历史管理验收：支持用户一键清空所有历史记录，清空后重启应用无残留历史数据，操作流畅无卡顿"
+    ],
+    "assumptions": [
+      "现有轻量计算器已具备成熟的加减运算能力、基础UI交互框架与运算精度规则",
+      "需求中要求的历史持久化为本地持久化，无需支持云端存储、多设备同步能力",
+      "新增的乘法、除法运算的数值范围、精度要求与现有加减运算保持一致，无需额外调整精度规则"
+    ],
+    "out_of_scope": [
+      "云端同步历史记录、多设备历史共享功能不在本次迭代范围内",
+      "科学计算类功能（如根号、三角函数、幂运算等）不在本次迭代范围内",
+      "历史记录分享、导出、搜索筛选功能不在本次迭代范围内",
+      "多语言适配、主题切换等非核心需求不在本次迭代范围内"
+    ]
+  },
+  "design": {
+    "architecture": "采用无侵入三层扩展架构，完全兼容原有代码结构，符合轻量产品定位：1. 核心运算层：在原有operations模块新增独立mul、div运算函数，与现有add、sub逻辑完全隔离，保证运算规则一致性与可测试性；2. 调度控制层：扩展原有Calculator类的compute方法支持新运算类型，新增历史持久化调度逻辑，初始化自动加载本地历史、每次计算完成自动落盘，内置1MB存储容量阈值校验与旧记录自动淘汰机制；3. 持久化层：新增轻量本地JSON存储模块，无第三方依赖，实现历史读写、容量控制、异常容错能力；4. 入口层：原有run_app入口逻辑完全保留，新增功能可选调用，不影响原有交互体验。整体新增代码量小于200行，包体积增量小于10KB，远低于50KB约束要求。",
+    "api_design": "1. 原有API100%兼容：原有Calculator.compute(op: str, a: float, b: float)接口完全保留，add/sub运算逻辑与返回值无任何变更，原有业务调用零修改即可正常运行；2. 新增运算API：core/operations模块新增def mul(a: float, b: float) -> float、def div(a: float, b: float) -> Union[float, str]独立接口，支持单元测试直接调用，div接口除数为0时返回友好字符串「除数不能为0」，无异常抛出；3. 新增历史管理API：Calculator类新增def get_history() -> List[Dict]（返回全量历史，包含运算表达式、结果、计算时间）、def clear_history() -> None（清空内存与本地历史）两个公开接口；4. 扩展compute接口参数：op参数新增支持'mul'、'div'两个枚举值，返回值规则与原有运算保持一致。所有API遵循原有代码风格与参数规范，无额外用户学习成本。",
+    "file_change_plan": [
+      {
+        "file_path": "core/operations.py",
+        "change_type": "modify",
+        "description": "新增mul乘法函数、div除法函数，div函数内置除数为0校验，返回友好提示，原有add、sub函数完全保留不修改",
+        "reason": "扩展运算能力，保证乘除运算逻辑独立可测试，符合原有运算模块的架构设计",
+        "risk_level": "low",
+        "acceptance_links": [
+          "乘法功能验收",
+          "除法功能验收",
+          "可测试性验收",
+          "兼容性验收"
+        ]
+      },
+      {
+        "file_path": "core/calculator.py",
+        "change_type": "modify",
+        "description": "1. 导入新增的mul、div运算函数；2. compute方法新增'mul'、'div'分支逻辑；3. __init__方法新增本地历史加载逻辑；4. 每次compute执行完成后自动触发历史持久化；5. 新增get_history、clear_history公开方法；6. 原有加减运算逻辑与history字段完全保留",
+        "reason": "扩展计算器调度能力，新增持久化逻辑，保证原有功能完全兼容",
+        "risk_level": "low",
+        "acceptance_links": [
+          "乘法功能验收",
+          "除法功能验收",
+          "历史持久化验收",
+          "历史管理验收",
+          "兼容性验收"
+        ]
+      },
+      {
+        "file_path": "core/history_storage.py",
+        "change_type": "create",
+        "description": "实现轻量本地历史存储能力：1. JSON格式读写历史记录；2. 内置1MB存储阈值校验，超出时自动淘汰最早的历史记录；3. 读写异常容错机制，文件损坏时自动初始化空历史",
+        "reason": "解耦持久化逻辑与核心计算逻辑，无第三方依赖，符合轻量产品定位",
+        "risk_level": "low",
+        "acceptance_links": [
+          "历史持久化验收",
+          "历史管理验收",
+          "存储容量约束"
+        ]
+      },
+      {
+        "file_path": "main.py",
+        "change_type": "modify",
+        "description": "新增乘除运算、历史管理功能的演示逻辑，原有加法运算示例完全保留",
+        "reason": "验证新增功能可用性，不影响原有入口逻辑",
+        "risk_level": "low",
+        "acceptance_links": [
+          "兼容性验收",
+          "历史管理验收"
+        ]
+      },
+      {
+        "file_path": "tests/test_operations.py",
+        "change_type": "create",
+        "description": "新增mul、div运算单元测试用例，覆盖整数、负数、小数、除数为0等场景，单元测试覆盖率不低于90%，同时保留原有加减运算的回归测试用例",
+        "reason": "保障可测试性要求，避免原有功能回归",
+        "risk_level": "low",
+        "acceptance_links": [
+          "可测试性验收",
+          "兼容性验收"
+        ]
+      }
+    ],
+    "risk_analysis": "1. 功能回归风险：新增代码可能影响原有加减运算逻辑，缓解策略：原有add、sub函数完全不修改，Calculator类原有加减分支逻辑保留，新增回归测试用例覆盖原有场景，上线前全量回归验证；2. 除法异常崩溃风险：除数为0时可能抛出异常导致程序崩溃，缓解策略：div函数内置除数为0校验，提前返回友好提示，Calculator层新增异常捕获兜底逻辑，确保无异常抛出；3. 持久化文件损坏风险：本地历史文件损坏可能导致应用启动失败，缓解策略：历史存储模块新增读写异常捕获，文件损坏时自动初始化空历史，不影响主流程运行；4. 存储容量超标风险：历史记录过多可能超出1MB存储限制，缓解策略：每次保存前校验文件大小，超出阈值时自动删除最早的10%记录，直到容量符合要求；5. 包体积超标风险：新增功能可能导致包体积超出50KB限制，缓解策略：所有功能基于Python原生模块实现，无第三方依赖，实际包体积增量小于10KB，远低于约束要求。所有风险均有明确缓解策略，整体风险等级为低。"
+  },
+  "codebase_context": {
+    "query": "为现有轻量计算器扩展乘法、除法运算能力，新增计算历史本地持久化功能，提升产品的可用性与可测试性，保障原有功能不受影响，符合轻量产品的定位要求",
+    "repo_skeleton": "代码库全景图谱 (Fast AST Repo-Map):\n- main.py\n  - def run_app()\n- core\\calculator.py\n  - class Calculator:\n    - def __init__()\n    - def compute(op, a, b)\n- core\\operations.py\n  - def add(a, b)\n  - def subtract(a, b)\n- core\\__init__.py\n- utils\\logger.py\n  - def setup_logger()\n- utils\\__init__.py",
+    "hot_files": [
+      {
+        "path": "core/calculator.py",
+        "content": "from testcode.core.operations import add, subtract\r\n\r\n\r\nclass Calculator:\r\n    def __init__(self):\r\n        self.history = []\r\n\r\n    def compute(self, op: str, a: float, b: float) -> float:\r\n        res = 0.0\r\n        if op == \"add\":\r\n            res = add(a, b)\r\n        elif op == \"sub\":\r\n            res = subtract(a, b)\r\n        else:\r\n            raise ValueError(f\"Unknown operation: {op}\")\r\n\r\n        self.history.append((op, a, b, res))\r\n        return res\r\n",
+        "score": 11.63,
+        "evidence": [
+          "summary_file:calculator",
+          "summary_file:operation",
+          "summary_file:operations",
+          "summary_file:compute",
+          "summary_file:mul",
+          "summary_file:div",
+          "summary_dir",
+          "keyword_path:calculator",
+          "keyword_body:calculator",
+          "keyword_body:operation",
+          "keyword_body:operations",
+          "keyword_body:compute",
+          "import-neighbor"
+        ]
+      },
+      {
+        "path": "core/operations.py",
+        "content": "def add(a: float, b: float) -> float:\r\n    return a + b\r\n\r\n\r\ndef subtract(a: float, b: float) -> float:\r\n    return a - b\r\n",
+        "score": 8.1,
+        "evidence": [
+          "summary_file:calculator",
+          "summary_file:operation",
+          "summary_file:operations",
+          "summary_file:mul",
+          "summary_file:div",
+          "summary_dir",
+          "keyword_path:operation",
+          "keyword_path:operations"
+        ]
+      },
+      {
+        "path": "README.md",
+        "content": "# Calculator App`n`nThis is a simple calculator application for testing Repo-Map.\r\n",
+        "score": 6.5,
+        "evidence": [
+          "summary_file:calculator",
+          "summary_file:operation",
+          "summary_file:compute",
+          "summary_file:mul",
+          "summary_file:div",
+          "summary_dir"
+        ]
+      },
+      {
+        "path": "main.py",
+        "content": "import sys\r\nfrom core.calculator import Calculator\r\nfrom utils.logger import setup_logger\r\n\r\ndef run_app():\r\n    logger = setup_logger()\r\n    calc = Calculator()\r\n    logger.info('Starting calculator app...')\r\n    result = calc.compute('add', 10.5, 5.0)\r\n    logger.info(f'Result: {result}')\r\n\r\nif __name__ == '__main__':\r\n    run_app()\r\n",
+        "score": 6.295,
+        "evidence": [
+          "summary_file:calculator",
+          "summary_file:operation",
+          "summary_file:mul",
+          "summary_file:div",
+          "summary_dir",
+          "keyword_body:calculator",
+          "keyword_body:compute"
+        ]
+      },
+      {
+        "path": "utils/logger.py",
+        "content": "import logging\r\n\r\n\r\ndef setup_logger():\r\n    logger = logging.getLogger(\"calculator\")\r\n    logger.setLevel(logging.DEBUG)\r\n    ch = logging.StreamHandler()\r\n    formatter = logging.Formatter(\r\n        \"%(asctime)s - %(name)s - %(levelname)s - %(message)s\"\r\n    )\r\n    ch.setFormatter(formatter)\r\n    logger.addHandler(ch)\r\n    return logger\r\n",
+        "score": 3.765,
+        "evidence": [
+          "summary_file:calculator",
+          "summary_file:operation",
+          "summary_dir",
+          "keyword_body:calculator",
+          "import-neighbor"
+        ]
+      },
+      {
+        "path": "core/__init__.py",
+        "content": "",
+        "score": 1.2,
+        "evidence": [
+          "summary_dir"
+        ]
+      },
+      {
+        "path": "utils/__init__.py",
+        "content": "",
+        "score": 0.45,
+        "evidence": [
+          "summary_dir"
+        ]
+      }
+    ],
+    "dependency_signatures": [
+      "core/calculator.py: class Calculator",
+      "core/operations.py: def add(a, b)",
+      "core/operations.py: def subtract(a, b)",
+      "main.py: def run_app()",
+      "utils/logger.py: def setup_logger()"
+    ],
+    "coverage_report": {
+      "requirement_points": [
+        {
+          "point": "为现有轻量计算器扩展乘法、除法运算能力，新增计算历史本地持久化功能，提升产品的可用性与可测试性，保障原有功能不受影响，符合轻量产品的定位要求",
+          "matched_files": 5,
+          "status": "covered"
+        }
+      ],
+      "uncovered_points": [],
+      "risk_level": "low"
+    },
+    "context_compaction": {
+      "complexity": 5,
+      "original_hot_files": 7,
+      "sent_hot_files": 5,
+      "content_chars_budget": 62000,
+      "content_chars_used": 1352,
+      "mode": "adaptive_logic_snippet"
+    }
+  },
+  "codebase": {
+    "repo_path": "testcode",
+    "repo_id": "testcode",
+    "repo_name": "testcode",
+    "branch": "main"
+  }
+}

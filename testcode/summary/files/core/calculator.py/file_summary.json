@@ -1,0 +1,29 @@
+{
+  "path": "core/calculator.py",
+  "language": "python",
+  "purpose": "Module around class Calculator",
+  "main_symbols": [
+    "class Calculator",
+    "Calculator.__init__",
+    "Calculator.compute"
+  ],
+  "exports": [
+    "Calculator"
+  ],
+  "keywords": [
+    "core",
+    "calculator",
+    "py",
+    "class",
+    "__init__",
+    "compute"
+  ],
+  "depends_on": [
+    "testcode.core.operations",
+    "add",
+    "subtract"
+  ],
+  "size_bytes": 448,
+  "importance_score": 5.95,
+  "generated_at": "2026-05-02T17:24:26.025023+00:00"
+}

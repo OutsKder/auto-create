@@ -1,0 +1,18 @@
+{
+  "path": "styles.css",
+  "language": "css",
+  "purpose": "styles.css documentation: overviewPanel,",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "styles",
+    "css",
+    "overviewPanel,",
+    "pipelinePanel,",
+    "insightPanel {"
+  ],
+  "depends_on": [],
+  "size_bytes": 43198,
+  "importance_score": 0.0,
+  "generated_at": "2026-04-28T11:42:29.330896+00:00"
+}
