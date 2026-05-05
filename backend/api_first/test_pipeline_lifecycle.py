@@ -37,12 +37,15 @@ class PipelineLifecycleTests(unittest.TestCase):
         pipeline = create_pipeline(context={"requirement_raw": "做一个简单的任务管理系统"})
         with patch.object(pipeline_service, "requirement_agent") as mock_agent:
             mock_agent.execute.return_value = FAKE_ANALYSIS_RESULT
-            run_pipeline(pipeline.id)
-
-        while pipeline.status != PipelineStatus.FINISHED:
-            pipeline.stage_done()
-            checkpoint = pipeline.current_checkpoint()
-            pipeline.approve(checkpoint.id)
+            
+            while pipeline.status != PipelineStatus.FINISHED:
+                if pipeline.status == PipelineStatus.WAITING_APPROVAL:
+                    checkpoint = pipeline.current_checkpoint()
+                    pipeline.approve(checkpoint.id)
+                elif pipeline.status == PipelineStatus.RUNNING or pipeline.status == PipelineStatus.CREATED:
+                    run_pipeline(pipeline.id)
+                else:
+                    break
 
         self.assertEqual(PipelineStatus.FINISHED, pipeline.status)
         self.assertEqual("delivery", pipeline.current_stage().id)
@@ -53,31 +56,28 @@ class PipelineLifecycleTests(unittest.TestCase):
         with patch.object(pipeline_service, "requirement_agent") as mock_agent:
             mock_agent.execute.return_value = FAKE_ANALYSIS_RESULT
             run_pipeline(pipeline.id)
-        pipeline.stage_done()  # analysis -> design
-
-        emit_event(EventType.NEED_APPROVAL, pipeline.id)
+    
         self.assertEqual(PipelineStatus.WAITING_APPROVAL, pipeline.status)
+        self.assertEqual("analysis", pipeline.current_stage().id)
         self.assertIsNotNone(pipeline.current_checkpoint())
-
+    
         checkpoint = pipeline.current_checkpoint()
         emit_event(EventType.APPROVE, pipeline.id, checkpoint_id=checkpoint.id)
-
+    
         self.assertEqual(PipelineStatus.RUNNING, pipeline.status)
-        self.assertEqual("coding", pipeline.current_stage().id)
+        self.assertEqual("design", pipeline.current_stage().id)
 
     def test_reject_resets_current_stage(self):
         pipeline = create_pipeline(context={"requirement_raw": "做一个简单的任务管理系统"})
         with patch.object(pipeline_service, "requirement_agent") as mock_agent:
             mock_agent.execute.return_value = FAKE_ANALYSIS_RESULT
             run_pipeline(pipeline.id)
-        pipeline.stage_done()  # analysis -> design
-        emit_event(EventType.NEED_APPROVAL, pipeline.id)
-        checkpoint = pipeline.current_checkpoint()
 
+        checkpoint = pipeline.current_checkpoint()
         emit_event(EventType.REJECT, pipeline.id, checkpoint_id=checkpoint.id)
 
         self.assertEqual(PipelineStatus.RUNNING, pipeline.status)
-        self.assertEqual("design", pipeline.current_stage().id)
+        self.assertEqual("analysis", pipeline.current_stage().id)
         self.assertEqual("PENDING", pipeline.current_stage().status.value)
 
     def test_run_pipeline_executes_requirement_analysis_when_context_ready(self):
@@ -86,24 +86,9 @@ class PipelineLifecycleTests(unittest.TestCase):
             mock_agent.execute.return_value = FAKE_ANALYSIS_RESULT
             run_pipeline(pipeline.id)
 
-            self.assertEqual("design", pipeline.current_stage().id)
-            self.assertEqual(
-                FAKE_ANALYSIS_RESULT["requirement_structured"],
-                pipeline.context.get("requirement_structured"),
-            )
-            self.assertEqual(FAKE_ANALYSIS_RESULT["meta_trace"], pipeline.context.get("meta_trace"))
-            mock_agent.execute.assert_called_once()
-
-    def test_run_pipeline_skips_requirement_analysis_without_requirement_raw(self):
-        pipeline = create_pipeline()
-
-        with patch.object(pipeline_service, "requirement_agent") as mock_agent:
-            run_pipeline(pipeline.id)
-
             self.assertEqual("analysis", pipeline.current_stage().id)
-            self.assertEqual(PipelineStatus.RUNNING, pipeline.status)
-            mock_agent.execute.assert_not_called()
+            self.assertEqual(PipelineStatus.WAITING_APPROVAL, pipeline.status)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main()

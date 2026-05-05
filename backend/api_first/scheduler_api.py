@@ -1,6 +1,7 @@
 from typing import Any, Dict
 import asyncio
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .pipeline import Pipeline, PipelineStatus
@@ -15,10 +16,18 @@ from .service import (
     run_agent_stages,
     reject,
     run_pipeline,
-    _run_auto_agent_stages,
 )
+from .dispatcher import dispatch_stage
 
 app = FastAPI(title="Pipeline Scheduler API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class ActionRequest(BaseModel):
@@ -33,9 +42,32 @@ def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
     current_stage = pipeline.current_stage()
     checkpoint = pipeline.current_checkpoint()
 
+    if pipeline.status in (PipelineStatus.CREATED, PipelineStatus.RUNNING):
+        next_http: Any = {
+            "method": "POST",
+            "path": f"/pipelines/{pipeline.id}/run",
+            "description": "推进当前 stage 并等待后台 agent 执行完成",
+        }
+    elif pipeline.status == PipelineStatus.WAITING_APPROVAL and checkpoint:
+        next_http = {
+            "approve": {
+                "method": "POST",
+                "path": f"/checkpoints/{checkpoint.id}/approve",
+                "description": "审批通过当前 checkpoint",
+            },
+            "reject": {
+                "method": "POST",
+                "path": f"/checkpoints/{checkpoint.id}/reject",
+                "description": "审批驳回当前 checkpoint",
+            },
+        }
+    else:
+        next_http = None
+
     return {
         "id": pipeline.id,
         "status": pipeline.status.value,
+        "current_stage_index": pipeline.current_stage_index,
         "current_stage": {
             "id": current_stage.id,
             "name": current_stage.name,
@@ -57,11 +89,28 @@ def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
             "id": checkpoint.id,
             "stage_id": checkpoint.stage_id,
             "stage_name": checkpoint.stage_name,
+            "stage_index": checkpoint.stage_index,
             "status": checkpoint.status.value,
+            "note": checkpoint.note,
+            "context_snapshot": checkpoint.context_snapshot,
+            "meta": checkpoint.meta,
         }
         if checkpoint
         else None,
+        "checkpoints": [
+            {
+                "id": item.id,
+                "stage_id": item.stage_id,
+                "stage_name": item.stage_name,
+                "stage_index": item.stage_index,
+                "status": item.status.value,
+                "note": item.note,
+            }
+            for item in pipeline.checkpoints
+        ],
         "context": pipeline.context
+        ,
+        "next_http": next_http,
     }
 
 
@@ -82,20 +131,27 @@ def list_pipelines_api() -> Dict[str, Any]:
     }
 
 
-def run_pipeline_background(pipeline_id: str) -> None:
-    """后台执行pipeline的Agent阶段"""
+async def run_pipeline_background(pipeline_id: str) -> None:
+    """后台异步执行pipeline的具体Stage"""
     try:
-        _run_auto_agent_stages(get_pipeline(pipeline_id))
+        pipeline = get_pipeline(pipeline_id)
+        # 不再用 while 循环，一次只跑到需要人工审批即可。
+        # 实际如果是多Agent可能还需要根据配置循环，这里我们阶段化执行：
+        await dispatch_stage(pipeline)
     except Exception as e:
         print(f"Pipeline执行出错: {str(e)}")
 
 @app.post("/pipelines/{pipeline_id}/run")
-def run_pipeline_api(pipeline_id: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
+async def run_pipeline_api(pipeline_id: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
     try:
         pipeline = get_pipeline(pipeline_id)
         # 先启动pipeline，立刻返回结果
         if pipeline.status == PipelineStatus.CREATED:
             pipeline.start()
+        elif pipeline.status == PipelineStatus.WAITING_APPROVAL:
+            # 如果当前状态是 WAITING_APPROVAL，说明用户未通过审批端点调用而是错误地再次调了 run
+            pass # 由dispatcher处理或抛错，这里放行保持幂等
+            
         # 添加后台任务执行Agent逻辑
         background_tasks.add_task(run_pipeline_background, pipeline_id)
         return _pipeline_to_dict(pipeline)

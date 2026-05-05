@@ -1,5 +1,5 @@
 {
-  "requirement_raw": "为现有轻量计算器项目增加一组可用性与可测试性功能：\n1) 新增乘法(`mul`)和除法(`div`)操作；\n2) 增加历史持久化；\n",
+  "requirement_raw": "为现有轻量计算器项目增加一组可用性与可测试性功能：\n1) 新增乘法(`mul`)和除法(`div`)操作；\n2) 增加历史持久化；\n 增加一个图形界面",
   "codebase": {
     "repo_path": "testcode",
     "repo_id": "testcode",

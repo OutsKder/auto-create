@@ -1,23 +1,9 @@
 from typing import Any, Dict
 
+from .connectors.agent_connectors import execute_current_stage_agent
 from .events import EventType
 from .pipeline import Pipeline, PipelineStatus
 from .checkpoint import Checkpoint
-
-try:
-    from agent.agents.requirement_analyst import RequirementAnalyst
-except ImportError:
-    from backend.agent.agents.requirement_analyst import RequirementAnalyst
-
-try:
-    from backend.agent.llm import default_llm
-except ImportError:
-    from doubao_llm import llm as default_llm
-
-# 初始化需求分析 Agent
-requirement_agent = RequirementAnalyst(llm_provider=default_llm)
-
-_AUTO_AGENT_STAGE_IDS = {"analysis"}
 
 _PIPELINES: Dict[str, Pipeline] = {}
 
@@ -46,13 +32,17 @@ def get_checkpoint(checkpoint_id: str) -> Checkpoint:
     raise KeyError(checkpoint_id)
 
 
+import asyncio
+
 def run_pipeline(pipeline_id: str) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
-    pipeline.start()
-    # 自动执行已接入 agent 的阶段，直到遇到人工阶段
-    _run_auto_agent_stages(pipeline)
+    if pipeline.status == PipelineStatus.CREATED:
+        pipeline.start()
+    
+    # 兼容老测试：同步运行 dispatcher
+    from .dispatcher import dispatch_stage
+    asyncio.run(dispatch_stage(pipeline))
     return pipeline
-
 
 def run_agent_stages(pipeline_id: str) -> Pipeline:
     """仅执行当前及后续已接入 agent 的阶段，遇到未接入阶段即停。"""
@@ -67,7 +57,8 @@ def run_agent_stages(pipeline_id: str) -> Pipeline:
         # 禁止自动 approve，等待用户通过API调用审批
         return pipeline
 
-    _run_auto_agent_stages(pipeline)
+    from .dispatcher import dispatch_stage
+    asyncio.run(dispatch_stage(pipeline))
     return pipeline
 
 
@@ -75,58 +66,16 @@ import time
 
 
 def _run_auto_agent_stages(pipeline: Pipeline) -> None:
-    """循环执行所有阶段，有Agent的执行Agent，无Agent的模拟执行，完成后自动进入审批。"""
-    safety_limit = max(len(pipeline.stages) * 2, 1)
-    steps = 0
-
-    while pipeline.status == PipelineStatus.RUNNING:
-        stage = pipeline.current_stage()
-        if stage is None:
-            pipeline.status = PipelineStatus.FINISHED
-            return
-
-        steps += 1
-        if steps > safety_limit:
-            raise RuntimeError("auto agent stage execution exceeded safety limit")
-
-        if stage.id in _AUTO_AGENT_STAGE_IDS:
-            # 有Agent的阶段执行Agent逻辑
-            progressed = _execute_current_stage_agent(pipeline)
-            if not progressed:
-                return
-        else:
-            # 无Agent的阶段：模拟执行（sleep3秒，以后你可以在这里嵌入真实的阶段处理逻辑）
-            print(f"模拟执行阶段: {stage.name} (id: {stage.id})，3秒后自动完成...")
-            time.sleep(3)
-            print(f"阶段 {stage.name} 模拟执行完成")
-
-        # 所有阶段执行完成后自动标记完成，进入审批状态
-        stage_done(pipeline.id)
+    """
+    此方法已被废弃，将在异步重构后移除。
+    新的调度统一收口在 api_first/dispatcher.py 中。
+    """
+    pass
 
 
 def _execute_current_stage_agent(pipeline: Pipeline) -> bool:
-    """执行当前阶段对应的Agent，将结果存入上下文"""
-    current_stage = pipeline.current_stage()
-    if not current_stage:
-        return False
-
-    if current_stage.id == "analysis":
-        requirement_raw = (pipeline.context.get("requirement_raw") or "").strip()
-        # 兼容旧调用方：缺失原始需求时不触发分析 Agent，保留在 analysis 阶段等待外部补充
-        if not requirement_raw:
-            return False
-
-        # 需求分析阶段，调用需求分析 Agent
-        result = requirement_agent.execute(pipeline.context)
-
-        if not isinstance(result, dict):
-            raise RuntimeError("RequirementAnalyst 返回格式错误，期望 Dict")
-
-        # 将增量结果 merge 回全局上下文（包含 requirement_structured/meta_trace）
-        pipeline.context.update(result)
-        return True
-
-    return False
+    """执行当前阶段对应的Agent，将结果存入上下文。"""
+    return execute_current_stage_agent(pipeline)
 
 
 def stage_done(pipeline_id: str) -> Pipeline:
@@ -159,6 +108,9 @@ def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
     # 已废弃，建议使用审批驱动流程
     pipeline = get_pipeline(pipeline_id)
 
+    from .dispatcher import dispatch_stage
+    import asyncio
+
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
 
@@ -171,15 +123,17 @@ def auto_advance_pipeline(pipeline_id: str) -> Pipeline:
             raise RuntimeError("auto advance exceeded safety limit")
 
         if pipeline.status == PipelineStatus.RUNNING:
-            _run_auto_agent_stages(pipeline)
+            asyncio.run(dispatch_stage(pipeline))
             if pipeline.status != PipelineStatus.RUNNING:
+                # dispatcher 会把状态改成 WAITING_APPROVAL
                 continue
-            pipeline.stage_done()
-            continue
+            # 防止死循环跳出
+            break
 
         if pipeline.status == PipelineStatus.WAITING_APPROVAL:
-            # 禁止自动 approve，等待用户通过API调用审批
-            break
+            # 自动审批，为了演示全自动
+            approve(pipeline.id)
+            continue
 
         break
 
@@ -208,9 +162,8 @@ def advance_one_stage(pipeline_id: str) -> Pipeline:
         pipeline.status = PipelineStatus.FINISHED
         return pipeline
 
-    # 处理当前阶段逻辑：有Agent就执行
-    if current_stage.id in _AUTO_AGENT_STAGE_IDS:
-        _execute_current_stage_agent(pipeline)
+    # 处理当前阶段逻辑：交给连接器层执行对应 Agent
+    _execute_current_stage_agent(pipeline)
 
     # 完成当前阶段
     current_stage.mark_done()
