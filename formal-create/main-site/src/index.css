@@ -67,6 +67,30 @@
   .eyebrow {
     @apply inline-flex items-center gap-2 text-xs font-medium tracking-wider uppercase text-ink-500;
   }
+
+  .stellar-field {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.38) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 72% 14%, rgba(147, 178, 255, 0.42) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 82% 62%, rgba(236, 72, 153, 0.28) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 28% 76%, rgba(255, 255, 255, 0.24) 0 1px, transparent 1.5px);
+    background-size: 160px 160px, 220px 220px, 260px 260px, 190px 190px;
+    opacity: 0.35;
+    animation: stellarDrift 16s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes stellarDrift {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate3d(-14px, 10px, 0);
+    opacity: 0.42;
+  }
 }
 
 /* 细腻滚动条（飞书风） */

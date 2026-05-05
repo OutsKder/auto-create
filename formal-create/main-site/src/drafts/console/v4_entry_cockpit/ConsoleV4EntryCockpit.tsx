@@ -3,19 +3,18 @@ import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Bot,
   CheckCircle2,
   Clock3,
+  Code2,
   FileText,
   GitMerge,
   LogOut,
   Loader2,
   MessageSquareText,
-  Plus,
   Rocket,
-  Search,
   ShieldCheck,
   Sparkles,
+  TestTube2,
   Terminal,
   UserCircle,
   Workflow,
@@ -201,7 +200,7 @@ const roleOrder: RoleKey[] = ["first", "product", "tech", "manager"];
 const DEMO_REQUIREMENT =
   "给博客增加评论功能：登录用户可评论，管理员可审核，敏感词自动拦截，并生成可合并 MR。";
 
-export default function ConsoleV2Geek() {
+export default function ConsoleV4EntryCockpit() {
   const [selectedRole, setSelectedRole] = useState<RoleKey>("first");
   const [requirement, setRequirement] = useState(DEMO_REQUIREMENT);
   const [pipelineState, setPipelineState] = useState<PipelineState>("CREATED");
@@ -290,6 +289,15 @@ export default function ConsoleV2Geek() {
     }
   }
 
+  function revisePlanDraft() {
+    setHasPlan(false);
+    setHasCreated(false);
+    setHasApproved(false);
+    setPipelineId(null);
+    setCheckpointId(null);
+    setPipelineState("CREATED");
+  }
+
   function resetDemo() {
     setRequirement(DEMO_REQUIREMENT);
     setHasCreated(false);
@@ -301,35 +309,33 @@ export default function ConsoleV2Geek() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-[#090910] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(139,92,246,0.18),transparent_36%),linear-gradient(135deg,#0a0a0f_0%,#111118_48%,#0b0712_100%)]" />
+    <div className="relative h-screen overflow-hidden bg-[#0b0b12] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_42%_-18%,rgba(139,92,246,0.16),transparent_34%),radial-gradient(circle_at_88%_18%,rgba(236,72,153,0.12),transparent_30%),linear-gradient(135deg,#0b0b12_0%,#11111a_52%,#0b0810_100%)]" />
       <div className="stellar-field pointer-events-none" />
-      <div className="pointer-events-none absolute -top-40 left-[18%] h-[520px] w-[620px] rounded-full bg-weave-500/20 blur-[150px] animate-float" />
-      <div className="pointer-events-none absolute right-[-10%] top-24 h-[520px] w-[620px] rounded-full bg-glow-pink/15 blur-[150px]" />
-      <div className="pointer-events-none absolute bottom-[-22%] left-[42%] h-[520px] w-[720px] rounded-full bg-glow-violet/20 blur-[170px]" />
-      <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-grid-24 opacity-[0.18]" />
+      <div className="pointer-events-none absolute -top-40 left-[18%] h-[520px] w-[620px] rounded-full bg-weave-500/16 blur-[150px] animate-float" />
+      <div className="pointer-events-none absolute right-[-10%] top-24 h-[520px] w-[620px] rounded-full bg-glow-pink/10 blur-[150px]" />
+      <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-grid-24 opacity-[0.12]" />
 
       <div className="relative flex h-screen overflow-hidden">
-        <aside className="hidden w-[88px] flex-col border-r border-white/[0.08] bg-[#0d0d16]/55 shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] backdrop-blur-2xl lg:flex">
-          <div className="flex h-[76px] items-center justify-center border-b border-white/[0.07]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-weave-400 via-glow-violet to-glow-pink shadow-[0_0_28px_rgba(139,92,246,0.35)]">
+        <aside className="hidden w-[72px] flex-col border-r border-white/[0.07] bg-[#0d0d16]/45 shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] backdrop-blur-2xl lg:flex">
+          <div className="flex h-16 items-center justify-center border-b border-white/[0.06]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-weave-400 via-glow-violet to-glow-pink shadow-[0_0_24px_rgba(139,92,246,0.28)]">
               <WeaveMark className="h-4 w-4" />
             </div>
           </div>
 
-          <nav className="flex flex-col items-center gap-2 p-3 text-xs">
+          <nav className="flex flex-col items-center gap-2 p-2 text-xs">
             {[
               { icon: Rocket, label: "项目", active: true },
               { icon: FileText, label: "制品" },
               { icon: ShieldCheck, label: "审批" },
-              { icon: Bot, label: "设置" },
             ].map((item) => (
               <button
                 key={item.label}
                 title={item.label}
-                className={`flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${
+                className={`flex h-12 w-12 flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${
                   item.active
-                    ? "border border-white/[0.10] bg-white/[0.08] text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]"
+                    ? "border border-white/[0.10] bg-white/[0.08] text-white shadow-[0_0_20px_rgba(139,92,246,0.14)]"
                     : "text-white/50 hover:text-white hover:bg-white/[0.05]"
                 }`}
               >
@@ -339,10 +345,10 @@ export default function ConsoleV2Geek() {
             ))}
           </nav>
 
-          <div className="mt-auto p-3">
+          <div className="mt-auto p-2">
             <div
-              className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-glow-pink shadow-[0_0_20px_rgba(236,72,153,0.12)]"
-              title="Alpha Workspace"
+              className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.035] text-glow-pink shadow-[0_0_16px_rgba(236,72,153,0.10)]"
+              title="Calm Cockpit Draft"
             >
               <Sparkles className="h-4 w-4" />
             </div>
@@ -358,8 +364,8 @@ export default function ConsoleV2Geek() {
             onRoleChange={setSelectedRole}
           />
 
-          <div className="min-h-0 flex-1 overflow-hidden p-3 md:p-4">
-            <div className="grid h-full min-h-0 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)] lg:overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden p-4 md:p-5">
+            <div className="mx-auto grid h-full max-w-[1480px] min-h-0 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[248px_minmax(0,1fr)] lg:overflow-hidden">
               <ProjectFlowPanel
                 stage={projectStage}
                 state={pipelineState}
@@ -379,6 +385,7 @@ export default function ConsoleV2Geek() {
                 isApiBusy={isApiBusy}
                 onRequirementChange={setRequirement}
                 onGeneratePlan={generateDeliveryPlan}
+                onRevisePlan={revisePlanDraft}
                 onConfirmPlan={confirmPlanAndRun}
                 onApprove={approveCheckpoint}
                 onReject={rejectCheckpoint}
@@ -426,48 +433,53 @@ function ProjectFlowPanel({
       : stage === "planned"
       ? 1
       : state === "WAITING_APPROVAL"
-      ? 3
+      ? 1
       : state === "FINISHED"
-      ? 4
+      ? 6
       : hasApproved
       ? 2
-      : 2;
+      : 1;
 
   const flow = [
     {
-      title: "输入需求",
-      desc: "描述目标和约束",
+      title: "需求分析",
+      desc: "拆解目标、边界和验收",
       icon: MessageSquareText,
     },
     {
-      title: "确认计划",
-      desc: "接受 AI 的交付路径",
-      icon: FileText,
+      title: "方案设计",
+      desc: "生成架构、接口和变更路径",
+      icon: Workflow,
     },
     {
-      title: "AI 执行",
-      desc: "需求、方案、代码、测试",
-      icon: Bot,
+      title: "编码实现",
+      desc: "输出代码变更和 Diff",
+      icon: Code2,
     },
     {
-      title: "人工审批",
-      desc: "Approve 或 Reject",
+      title: "测试验证",
+      desc: "生成测试并验证关键路径",
+      icon: TestTube2,
+    },
+    {
+      title: "代码评审",
+      desc: "检查风险、规范和阻塞项",
       icon: ShieldCheck,
     },
     {
-      title: "交付结果",
-      desc: "文档、测试摘要、MR",
+      title: "交付集成",
+      desc: "汇总交付包和 MR",
       icon: GitMerge,
     },
   ];
 
   return (
-    <aside className="flex min-h-[520px] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.10] bg-[#10101a]/55 shadow-[0_24px_80px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
-      <div className="flex-none border-b border-white/[0.07] px-5 py-4">
+    <aside className="flex min-h-[500px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.09] bg-[#11111a]/50 shadow-[0_20px_70px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
+      <div className="flex-none border-b border-white/[0.06] px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">项目完成路径</h2>
-            <p className="mt-1 text-xs text-white/45">只看当前项目走到哪一步。</p>
+            <p className="mt-1 text-xs text-white/42">按赛题六阶段推进。</p>
           </div>
           <button
             onClick={onReset}
@@ -478,7 +490,7 @@ function ProjectFlowPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="space-y-2">
           {flow.map((item, index) => {
             const done = currentIndex > index;
@@ -487,7 +499,7 @@ function ProjectFlowPanel({
             return (
               <div
                 key={item.title}
-                className={`rounded-2xl border p-4 transition-all duration-300 ${
+                className={`rounded-2xl border p-3.5 transition-all duration-300 ${
                   active
                     ? "border-glow-pink/35 bg-gradient-to-br from-weave-500/15 via-glow-violet/10 to-glow-pink/10 shadow-[0_0_28px_rgba(139,92,246,0.14)]"
                     : done
@@ -497,7 +509,7 @@ function ProjectFlowPanel({
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${
+                    className={`flex h-8 w-8 flex-none items-center justify-center rounded-xl ${
                       active
                         ? "bg-gradient-to-br from-weave-400/25 to-glow-pink/20 text-glow-pink"
                         : done
@@ -505,14 +517,14 @@ function ProjectFlowPanel({
                         : "bg-white/[0.04] text-white/30"
                     }`}
                   >
-                    {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-[10px] text-white/30">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <div className="text-sm font-semibold">{item.title}</div>
+                      <div className="text-[13px] font-semibold">{item.title}</div>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-white/45">{item.desc}</p>
                   </div>
@@ -538,6 +550,7 @@ function CurrentStepWorkspace({
   isApiBusy,
   onRequirementChange,
   onGeneratePlan,
+  onRevisePlan,
   onConfirmPlan,
   onApprove,
   onReject,
@@ -553,13 +566,14 @@ function CurrentStepWorkspace({
   isApiBusy: boolean;
   onRequirementChange: (value: string) => void;
   onGeneratePlan: () => Promise<void>;
+  onRevisePlan: () => void;
   onConfirmPlan: () => Promise<void>;
   onApprove: () => Promise<void>;
   onReject: () => Promise<void>;
 }) {
   const title =
     stage === "empty"
-      ? "输入项目目标"
+      ? "AI 需求交付 Agent"
       : stage === "planned"
       ? "确认交付计划"
       : state === "FINISHED"
@@ -570,7 +584,7 @@ function CurrentStepWorkspace({
 
   const description =
     stage === "empty"
-      ? "先用自然语言描述你要完成的项目，系统会生成可审阅的交付计划。"
+      ? "让一句需求进入可审批、可追踪、可交付的项目流。"
       : stage === "planned"
       ? "只在这里做确认。接受后，AI 才会进入执行流水线。"
       : state === "FINISHED"
@@ -582,14 +596,14 @@ function CurrentStepWorkspace({
       : "AI 正在生成方案，完成后会停在人工审批点。";
 
   return (
-    <section className="flex min-h-[620px] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.10] bg-[#0f0f19]/62 shadow-[0_24px_90px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
-      <div className="flex-none border-b border-white/[0.07] bg-white/[0.015] px-6 py-5">
+    <section className="flex min-h-[620px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.09] bg-[#101019]/56 shadow-[0_22px_80px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
+      <div className="flex-none border-b border-white/[0.06] bg-white/[0.012] px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-[11px] font-mono uppercase tracking-[0.16em] text-transparent">
               Current Step
             </div>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/45">
               {description}
             </p>
@@ -598,50 +612,79 @@ function CurrentStepWorkspace({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 md:p-6">
         {stage === "empty" && (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div>
-              <textarea
-                value={requirement}
-                onChange={(event) => onRequirementChange(event.target.value)}
-                placeholder={lens.placeholder}
-                className="min-h-44 w-full resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-white/25 outline-none transition-all focus:border-glow-violet/50 focus:ring-4 focus:ring-glow-violet/10"
-              />
-              <div className="mt-4 flex flex-wrap gap-2">
-                {lens.templates.map((template) => (
+          <div className="flex min-h-full items-center justify-center">
+            <div className="w-full max-w-4xl">
+              <div className="mb-8 text-center">
+                <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.04] px-3 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-white/45">
+                  <Sparkles className="h-3.5 w-3.5 text-glow-pink" />
+                  Requirement Flow Agent
+                </div>
+                <h3 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold leading-tight tracking-[-0.04em] md:text-6xl">
+                  让需求像水流一样，
+                  <span className="block bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-transparent">
+                    可控地进入交付。
+                  </span>
+                </h3>
+                <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-white/48">
+                  先写一句目标。织界会按需求、方案、编码、测试、评审、交付六阶段推进，并在关键节点等待你确认。
+                </p>
+              </div>
+
+              <div className="rounded-[1.65rem] border border-white/[0.10] bg-black/24 p-3 shadow-[0_28px_90px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl">
+                <textarea
+                  value={requirement}
+                  onChange={(event) => onRequirementChange(event.target.value)}
+                  placeholder={lens.placeholder}
+                  className="min-h-36 w-full resize-none rounded-[1.25rem] border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm leading-relaxed text-white placeholder:text-white/25 outline-none transition-all focus:border-glow-violet/50 focus:ring-4 focus:ring-glow-violet/10"
+                />
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    {lens.templates.slice(0, 2).map((template) => (
+                      <button
+                        key={template}
+                        onClick={() => onRequirementChange(template)}
+                        className="rounded-full border border-white/[0.10] bg-white/[0.035] px-3 py-1.5 text-xs text-white/55 transition-colors hover:border-glow-violet/30 hover:bg-white/[0.07] hover:text-white"
+                      >
+                        {template.slice(0, 20)}...
+                      </button>
+                    ))}
+                  </div>
                   <button
-                    key={template}
-                    onClick={() => onRequirementChange(template)}
-                    className="rounded-full border border-white/[0.10] bg-white/[0.035] px-3 py-1.5 text-xs text-white/55 transition-colors hover:border-glow-violet/30 hover:bg-white/[0.07] hover:text-white"
+                    onClick={onGeneratePlan}
+                    disabled={hasPlan || hasCreated || isApiBusy}
+                    className="inline-flex h-11 flex-none items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-5 text-sm font-semibold text-white shadow-[0_0_26px_rgba(236,72,153,0.20)] transition-all hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(236,72,153,0.30)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
                   >
-                    {template.slice(0, 24)}...
+                    {isApiBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Rocket className="h-4 w-4" />
+                    )}
+                    {isApiBusy ? "正在创建流水线" : "生成交付计划"}
                   </button>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-3">
+                {["需求分析", "方案设计", "编码实现", "测试验证", "代码评审", "交付集成"].map((item, index) => (
+                  <div key={item} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <span className="font-mono text-white/25">0{index + 1}</span>
+                    <span className="ml-2 text-white/60">{item}</span>
+                  </div>
                 ))}
               </div>
-              <button
-                onClick={onGeneratePlan}
-                disabled={hasPlan || hasCreated || isApiBusy}
-                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(236,72,153,0.24)] transition-all hover:scale-[1.01] hover:shadow-[0_0_38px_rgba(236,72,153,0.34)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
-              >
-                {isApiBusy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Rocket className="h-4 w-4" />
-                )}
-                {isApiBusy ? "正在创建流水线" : "生成交付计划"}
-              </button>
             </div>
-            <RequirementBrief requirement={activeRequirement} resolved={false} />
           </div>
         )}
 
         {stage === "planned" && (
-          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
             <RequirementBrief requirement={activeRequirement} resolved />
             <PlanPreview
               lens={lens}
               requirement={activeRequirement}
+              onRevise={onRevisePlan}
               onConfirm={onConfirmPlan}
               isBusy={isApiBusy}
             />
@@ -649,7 +692,7 @@ function CurrentStepWorkspace({
         )}
 
         {stage === "running" && (
-          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
             <RequirementBrief requirement={activeRequirement} resolved />
             <PipelinePreview
               requirement={activeRequirement}
@@ -680,11 +723,11 @@ function TopStatusBar({
   onRoleChange: (role: RoleKey) => void;
 }) {
   return (
-    <header className="flex h-[76px] flex-none items-center justify-between gap-4 border-b border-white/[0.10] bg-[#0d0d16]/65 px-5 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-2xl md:px-6">
+    <header className="flex h-16 flex-none items-center justify-between gap-4 border-b border-white/[0.08] bg-[#0d0d16]/58 px-5 shadow-[0_10px_34px_rgba(0,0,0,0.20)] backdrop-blur-2xl md:px-6">
       <div className="flex min-w-0 items-center gap-4">
         <Link
           to="/drafts/landing/v2"
-          className="hidden h-10 w-10 flex-none items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.04] text-white/45 transition-colors hover:border-glow-violet/35 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35 md:flex"
+          className="hidden h-9 w-9 flex-none items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.035] text-white/45 transition-colors hover:border-glow-violet/35 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35 md:flex"
           aria-label="返回官网"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -693,7 +736,7 @@ function TopStatusBar({
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-[11px] font-mono uppercase tracking-[0.16em] text-transparent">
               <Terminal className="h-3.5 w-3.5" />
-              Project Cockpit
+              Calm Cockpit
             </span>
             <StateBadge state={state} />
             <span className="rounded-full border border-white/[0.10] bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/45">
@@ -722,20 +765,12 @@ function ContextActions() {
   return (
     <>
       <Link
-        to="/drafts/landing/v2"
+        to="/drafts/landing/v5"
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.10] bg-white/[0.04] px-3 text-xs font-mono text-white/45 transition-colors hover:border-glow-violet/30 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Landing
+        v5
       </Link>
-      <div className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.10] bg-black/20 px-3 text-sm text-white/40 md:flex">
-        <Search className="h-4 w-4" />
-        搜索项目 / MR
-      </div>
-      <button className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(236,72,153,0.22)] transition-all hover:scale-[1.01] hover:shadow-[0_0_32px_rgba(236,72,153,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40">
-        <Plus className="h-4 w-4" />
-        新建
-      </button>
       <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.10] bg-white/[0.04] px-3 text-sm text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
         <UserCircle className="h-4 w-4" />
         Demo
@@ -812,11 +847,13 @@ function RequirementBrief({
 function PlanPreview({
   lens,
   requirement,
+  onRevise,
   onConfirm,
   isBusy,
 }: {
   lens: RoleLens;
   requirement: string;
+  onRevise: () => void;
   onConfirm: () => Promise<void>;
   isBusy: boolean;
 }) {
@@ -829,9 +866,12 @@ function PlanPreview({
 
       <div className="mt-5 space-y-3">
         {[
-          ["01", "确认目标", lens.outputHint],
-          ["02", "生成路径", "AI 会先产出需求、架构、代码和测试的执行顺序。"],
-          ["03", "等待审批", lens.checkpoint.summary],
+          ["01", "需求分析", lens.outputHint],
+          ["02", "方案设计", "输出技术方案、接口思路、文件变更路径和风险点。"],
+          ["03", "编码实现", "根据方案生成代码变更集，并保留可审阅 Diff。"],
+          ["04", "测试验证", "生成测试策略、边界用例和关键路径验证结果。"],
+          ["05", "代码评审", "检查正确性、安全性、规范性和发布阻塞项。"],
+          ["06", "交付集成", "汇总需求文档、方案、测试摘要和可合并 MR。"],
         ].map(([index, title, desc]) => (
           <div
             key={title}
@@ -847,18 +887,34 @@ function PlanPreview({
         ))}
       </div>
 
-      <button
-        onClick={onConfirm}
-        disabled={isBusy}
-        className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-4 text-sm font-semibold text-white shadow-[0_0_26px_rgba(236,72,153,0.22)] transition-all hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(236,72,153,0.32)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
-      >
-        {isBusy ? "正在启动" : "确认计划并启动"}
-        {isBusy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <ArrowRight className="h-3.5 w-3.5" />
-        )}
-      </button>
+      <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/18 p-4">
+        <div className="text-xs font-semibold text-white/75">这一步由你决定</div>
+        <p className="mt-1 text-xs leading-relaxed text-white/42">
+          如果方向不对，先返回修改需求并重新生成计划；如果方向正确，再启动 AI 执行。
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRevise}
+            disabled={isBusy}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.10] bg-white/[0.035] px-4 text-sm font-medium text-white/65 transition-colors hover:border-glow-violet/30 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/30"
+          >
+            修改需求并重新生成
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isBusy}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-4 text-sm font-semibold text-white shadow-[0_0_26px_rgba(236,72,153,0.22)] transition-all hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(236,72,153,0.32)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
+          >
+            {isBusy ? "正在启动" : "确认计划并启动"}
+            {isBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ArrowRight className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -936,7 +992,7 @@ function PipelinePreview({
           ) : (
             <Loader2 className="h-4 w-4 animate-spin text-weave-300" />
           )}
-          {state === "WAITING_APPROVAL" ? "方案设计等待人工审批" : "Architecture Agent 正在生成方案"}
+          {state === "WAITING_APPROVAL" ? "方案设计等待人工审批" : "方案设计 Agent 正在生成方案"}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-white/45">
           {state === "WAITING_APPROVAL"

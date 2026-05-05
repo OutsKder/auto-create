@@ -5,7 +5,7 @@ import WeaveMark from "../components/WeaveMark";
 type Draft = {
   title: string;
   subtitle: string;
-  tag: "飞书骨架" | "AI 极客风" | "融合版" | "昼夜双态";
+  tag: "飞书骨架" | "AI 极客风" | "融合版" | "昼夜双态" | "顺序流水线";
   path: string;
   status: "进行中" | "待评审" | "已定稿" | "推荐";
   updatedAt: string;
@@ -15,14 +15,23 @@ type Draft = {
 
 const landingDrafts: Draft[] = [
   {
+    title: "v5 · Sequence Story",
+    subtitle: "借鉴 AI 产品官网表达，但改成有先后顺序的需求到 MR 交付叙事",
+    tag: "顺序流水线",
+    path: "/drafts/landing/v5",
+    status: "推荐",
+    updatedAt: "Day 2 · 15:40",
+    accent: "bg-gradient-to-r from-weave-300 via-glow-violet to-glow-pink",
+    featured: true,
+  },
+  {
     title: "v4 · Day/Night",
     subtitle: "基于 v2/v3 的昼夜双态原型，太阳与日食切换黑白工作空间",
     tag: "昼夜双态",
     path: "/drafts/landing/v4",
-    status: "推荐",
+    status: "待评审",
     updatedAt: "Day 1 · 17:35",
     accent: "bg-gradient-to-r from-amber-300 via-weave-500 to-glow-violet",
-    featured: true,
   },
   {
     title: "v3 · Hybrid",
@@ -163,7 +172,7 @@ export default function DraftGallery() {
             <h2 className="text-sm font-semibold text-ink-900">
               控制台 · Console
             </h2>
-            <span className="text-xs text-ink-500">Story 2 · 4 个草稿</span>
+            <span className="text-xs text-ink-500">Story 2 · 6 个草稿</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl">
             <Link
@@ -220,6 +229,70 @@ export default function DraftGallery() {
                 </span>
                 <span className="text-ink-300">·</span>
                 <span>Day 1 · 16:40</span>
+              </div>
+            </Link>
+            <Link
+              to="/drafts/console/v4"
+              className="group card-feishu p-5 relative overflow-hidden block ring-1 ring-glow-pink/30 shadow-glow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-glow-pink via-glow-violet to-weave-300" />
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium tracking-wider uppercase text-glow-pink bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+                <Sparkles className="h-2.5 w-2.5" />
+                借鉴版
+              </div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs font-medium text-ink-500 mb-1.5">
+                    方案 D · 一句需求入口
+                  </div>
+                  <div className="text-base font-semibold text-ink-900">
+                    v4 · Entry Cockpit
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-ink-400 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink-900" />
+              </div>
+              <p className="mt-3 text-sm text-ink-600 leading-relaxed">
+                借鉴 AI 产品首页的克制入口：先用一句强主张和中央输入框启动项目，再进入驾驶舱。
+              </p>
+              <div className="mt-5 flex items-center gap-3 text-[11px] text-ink-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-glow-pink" />
+                  新试错
+                </span>
+                <span className="text-ink-300">·</span>
+                <span>Day 2 · 16:35</span>
+              </div>
+            </Link>
+            <Link
+              to="/drafts/console/v3"
+              className="group card-feishu p-5 relative overflow-hidden block ring-1 ring-glow-violet/30 shadow-glow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-weave-300 via-glow-violet to-glow-pink" />
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium tracking-wider uppercase text-weave-700 bg-weave-50 px-2 py-0.5 rounded-full border border-weave-100">
+                <Sparkles className="h-2.5 w-2.5" />
+                新稿
+              </div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs font-medium text-ink-500 mb-1.5">
+                    方案 C · 克制驾驶舱
+                  </div>
+                  <div className="text-base font-semibold text-ink-900">
+                    v3 · Calm Cockpit
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-ink-400 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink-900" />
+              </div>
+              <p className="mt-3 text-sm text-ink-600 leading-relaxed">
+                新建试错草稿：减少满屏压迫感，把项目路线、当前决策和交付状态分得更清楚。
+              </p>
+              <div className="mt-5 flex items-center gap-3 text-[11px] text-ink-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-glow-violet" />
+                  正在打磨
+                </span>
+                <span className="text-ink-300">·</span>
+                <span>Day 2 · 15:50</span>
               </div>
             </Link>
             <Link

@@ -11,9 +11,7 @@ import {
   LogOut,
   Loader2,
   MessageSquareText,
-  Plus,
   Rocket,
-  Search,
   ShieldCheck,
   Sparkles,
   Terminal,
@@ -201,7 +199,7 @@ const roleOrder: RoleKey[] = ["first", "product", "tech", "manager"];
 const DEMO_REQUIREMENT =
   "给博客增加评论功能：登录用户可评论，管理员可审核，敏感词自动拦截，并生成可合并 MR。";
 
-export default function ConsoleV2Geek() {
+export default function ConsoleV3CalmCockpit() {
   const [selectedRole, setSelectedRole] = useState<RoleKey>("first");
   const [requirement, setRequirement] = useState(DEMO_REQUIREMENT);
   const [pipelineState, setPipelineState] = useState<PipelineState>("CREATED");
@@ -301,35 +299,33 @@ export default function ConsoleV2Geek() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-[#090910] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(139,92,246,0.18),transparent_36%),linear-gradient(135deg,#0a0a0f_0%,#111118_48%,#0b0712_100%)]" />
+    <div className="relative h-screen overflow-hidden bg-[#0b0b12] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_42%_-18%,rgba(139,92,246,0.16),transparent_34%),radial-gradient(circle_at_88%_18%,rgba(236,72,153,0.12),transparent_30%),linear-gradient(135deg,#0b0b12_0%,#11111a_52%,#0b0810_100%)]" />
       <div className="stellar-field pointer-events-none" />
-      <div className="pointer-events-none absolute -top-40 left-[18%] h-[520px] w-[620px] rounded-full bg-weave-500/20 blur-[150px] animate-float" />
-      <div className="pointer-events-none absolute right-[-10%] top-24 h-[520px] w-[620px] rounded-full bg-glow-pink/15 blur-[150px]" />
-      <div className="pointer-events-none absolute bottom-[-22%] left-[42%] h-[520px] w-[720px] rounded-full bg-glow-violet/20 blur-[170px]" />
-      <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-grid-24 opacity-[0.18]" />
+      <div className="pointer-events-none absolute -top-40 left-[18%] h-[520px] w-[620px] rounded-full bg-weave-500/16 blur-[150px] animate-float" />
+      <div className="pointer-events-none absolute right-[-10%] top-24 h-[520px] w-[620px] rounded-full bg-glow-pink/10 blur-[150px]" />
+      <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-grid-24 opacity-[0.12]" />
 
       <div className="relative flex h-screen overflow-hidden">
-        <aside className="hidden w-[88px] flex-col border-r border-white/[0.08] bg-[#0d0d16]/55 shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] backdrop-blur-2xl lg:flex">
-          <div className="flex h-[76px] items-center justify-center border-b border-white/[0.07]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-weave-400 via-glow-violet to-glow-pink shadow-[0_0_28px_rgba(139,92,246,0.35)]">
+        <aside className="hidden w-[72px] flex-col border-r border-white/[0.07] bg-[#0d0d16]/45 shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] backdrop-blur-2xl lg:flex">
+          <div className="flex h-16 items-center justify-center border-b border-white/[0.06]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-weave-400 via-glow-violet to-glow-pink shadow-[0_0_24px_rgba(139,92,246,0.28)]">
               <WeaveMark className="h-4 w-4" />
             </div>
           </div>
 
-          <nav className="flex flex-col items-center gap-2 p-3 text-xs">
+          <nav className="flex flex-col items-center gap-2 p-2 text-xs">
             {[
               { icon: Rocket, label: "项目", active: true },
               { icon: FileText, label: "制品" },
               { icon: ShieldCheck, label: "审批" },
-              { icon: Bot, label: "设置" },
             ].map((item) => (
               <button
                 key={item.label}
                 title={item.label}
-                className={`flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${
+                className={`flex h-12 w-12 flex-col items-center justify-center gap-1 rounded-2xl transition-colors ${
                   item.active
-                    ? "border border-white/[0.10] bg-white/[0.08] text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]"
+                    ? "border border-white/[0.10] bg-white/[0.08] text-white shadow-[0_0_20px_rgba(139,92,246,0.14)]"
                     : "text-white/50 hover:text-white hover:bg-white/[0.05]"
                 }`}
               >
@@ -339,10 +335,10 @@ export default function ConsoleV2Geek() {
             ))}
           </nav>
 
-          <div className="mt-auto p-3">
+          <div className="mt-auto p-2">
             <div
-              className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-glow-pink shadow-[0_0_20px_rgba(236,72,153,0.12)]"
-              title="Alpha Workspace"
+              className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.035] text-glow-pink shadow-[0_0_16px_rgba(236,72,153,0.10)]"
+              title="Calm Cockpit Draft"
             >
               <Sparkles className="h-4 w-4" />
             </div>
@@ -358,8 +354,8 @@ export default function ConsoleV2Geek() {
             onRoleChange={setSelectedRole}
           />
 
-          <div className="min-h-0 flex-1 overflow-hidden p-3 md:p-4">
-            <div className="grid h-full min-h-0 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)] lg:overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden p-4 md:p-5">
+            <div className="mx-auto grid h-full max-w-[1480px] min-h-0 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[248px_minmax(0,1fr)] lg:overflow-hidden">
               <ProjectFlowPanel
                 stage={projectStage}
                 state={pipelineState}
@@ -462,12 +458,12 @@ function ProjectFlowPanel({
   ];
 
   return (
-    <aside className="flex min-h-[520px] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.10] bg-[#10101a]/55 shadow-[0_24px_80px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
-      <div className="flex-none border-b border-white/[0.07] px-5 py-4">
+    <aside className="flex min-h-[500px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.09] bg-[#11111a]/50 shadow-[0_20px_70px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
+      <div className="flex-none border-b border-white/[0.06] px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">项目完成路径</h2>
-            <p className="mt-1 text-xs text-white/45">只看当前项目走到哪一步。</p>
+            <p className="mt-1 text-xs text-white/42">只保留路线和当前位置。</p>
           </div>
           <button
             onClick={onReset}
@@ -478,7 +474,7 @@ function ProjectFlowPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="space-y-2">
           {flow.map((item, index) => {
             const done = currentIndex > index;
@@ -487,7 +483,7 @@ function ProjectFlowPanel({
             return (
               <div
                 key={item.title}
-                className={`rounded-2xl border p-4 transition-all duration-300 ${
+                className={`rounded-2xl border p-3.5 transition-all duration-300 ${
                   active
                     ? "border-glow-pink/35 bg-gradient-to-br from-weave-500/15 via-glow-violet/10 to-glow-pink/10 shadow-[0_0_28px_rgba(139,92,246,0.14)]"
                     : done
@@ -497,7 +493,7 @@ function ProjectFlowPanel({
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${
+                    className={`flex h-8 w-8 flex-none items-center justify-center rounded-xl ${
                       active
                         ? "bg-gradient-to-br from-weave-400/25 to-glow-pink/20 text-glow-pink"
                         : done
@@ -505,14 +501,14 @@ function ProjectFlowPanel({
                         : "bg-white/[0.04] text-white/30"
                     }`}
                   >
-                    {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-[10px] text-white/30">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <div className="text-sm font-semibold">{item.title}</div>
+                      <div className="text-[13px] font-semibold">{item.title}</div>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-white/45">{item.desc}</p>
                   </div>
@@ -582,14 +578,14 @@ function CurrentStepWorkspace({
       : "AI 正在生成方案，完成后会停在人工审批点。";
 
   return (
-    <section className="flex min-h-[620px] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.10] bg-[#0f0f19]/62 shadow-[0_24px_90px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
-      <div className="flex-none border-b border-white/[0.07] bg-white/[0.015] px-6 py-5">
+    <section className="flex min-h-[620px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.09] bg-[#101019]/56 shadow-[0_22px_80px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
+      <div className="flex-none border-b border-white/[0.06] bg-white/[0.012] px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-[11px] font-mono uppercase tracking-[0.16em] text-transparent">
               Current Step
             </div>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/45">
               {description}
             </p>
@@ -598,15 +594,15 @@ function CurrentStepWorkspace({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 md:p-6">
         {stage === "empty" && (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div>
               <textarea
                 value={requirement}
                 onChange={(event) => onRequirementChange(event.target.value)}
                 placeholder={lens.placeholder}
-                className="min-h-44 w-full resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-white/25 outline-none transition-all focus:border-glow-violet/50 focus:ring-4 focus:ring-glow-violet/10"
+                className="min-h-56 w-full resize-none rounded-[1.25rem] border border-white/[0.10] bg-black/24 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-white/25 outline-none transition-all focus:border-glow-violet/50 focus:ring-4 focus:ring-glow-violet/10"
               />
               <div className="mt-4 flex flex-wrap gap-2">
                 {lens.templates.map((template) => (
@@ -622,7 +618,7 @@ function CurrentStepWorkspace({
               <button
                 onClick={onGeneratePlan}
                 disabled={hasPlan || hasCreated || isApiBusy}
-                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(236,72,153,0.24)] transition-all hover:scale-[1.01] hover:shadow-[0_0_38px_rgba(236,72,153,0.34)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
+                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-5 text-sm font-semibold text-white shadow-[0_0_26px_rgba(236,72,153,0.20)] transition-all hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(236,72,153,0.30)] disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40"
               >
                 {isApiBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -637,7 +633,7 @@ function CurrentStepWorkspace({
         )}
 
         {stage === "planned" && (
-          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
             <RequirementBrief requirement={activeRequirement} resolved />
             <PlanPreview
               lens={lens}
@@ -649,7 +645,7 @@ function CurrentStepWorkspace({
         )}
 
         {stage === "running" && (
-          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
             <RequirementBrief requirement={activeRequirement} resolved />
             <PipelinePreview
               requirement={activeRequirement}
@@ -680,11 +676,11 @@ function TopStatusBar({
   onRoleChange: (role: RoleKey) => void;
 }) {
   return (
-    <header className="flex h-[76px] flex-none items-center justify-between gap-4 border-b border-white/[0.10] bg-[#0d0d16]/65 px-5 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-2xl md:px-6">
+    <header className="flex h-16 flex-none items-center justify-between gap-4 border-b border-white/[0.08] bg-[#0d0d16]/58 px-5 shadow-[0_10px_34px_rgba(0,0,0,0.20)] backdrop-blur-2xl md:px-6">
       <div className="flex min-w-0 items-center gap-4">
         <Link
           to="/drafts/landing/v2"
-          className="hidden h-10 w-10 flex-none items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.04] text-white/45 transition-colors hover:border-glow-violet/35 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35 md:flex"
+          className="hidden h-9 w-9 flex-none items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.035] text-white/45 transition-colors hover:border-glow-violet/35 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35 md:flex"
           aria-label="返回官网"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -693,7 +689,7 @@ function TopStatusBar({
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-[11px] font-mono uppercase tracking-[0.16em] text-transparent">
               <Terminal className="h-3.5 w-3.5" />
-              Project Cockpit
+              Calm Cockpit
             </span>
             <StateBadge state={state} />
             <span className="rounded-full border border-white/[0.10] bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/45">
@@ -722,20 +718,12 @@ function ContextActions() {
   return (
     <>
       <Link
-        to="/drafts/landing/v2"
+        to="/drafts/landing/v5"
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.10] bg-white/[0.04] px-3 text-xs font-mono text-white/45 transition-colors hover:border-glow-violet/30 hover:bg-white/[0.07] hover:text-glow-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-violet/35"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Landing
+        v5
       </Link>
-      <div className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.10] bg-black/20 px-3 text-sm text-white/40 md:flex">
-        <Search className="h-4 w-4" />
-        搜索项目 / MR
-      </div>
-      <button className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-weave-400 via-glow-violet to-glow-pink px-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(236,72,153,0.22)] transition-all hover:scale-[1.01] hover:shadow-[0_0_32px_rgba(236,72,153,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glow-pink/40">
-        <Plus className="h-4 w-4" />
-        新建
-      </button>
       <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.10] bg-white/[0.04] px-3 text-sm text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
         <UserCircle className="h-4 w-4" />
         Demo
