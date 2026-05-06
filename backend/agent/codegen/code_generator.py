@@ -7,13 +7,14 @@ code_generator.py
 - 调用 LLM 生成结构化 Diff Bundle
 - 对结果做 JSON 解析、结构校验与基础静态校验
 
-如果 prompt 模板不可用，则退化为基于设计信息的最小可执行 Diff Bundle，保证链路可用。
+如果 LLM 没有返回可解析、可校验的 Diff Bundle，则明确失败，不生成伪造兜底代码。
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional, Literal
 
@@ -89,7 +90,7 @@ class CodeGeneratorAgent(BaseAgent):
     - 调用 LLM 生成结构化 Diff Bundle
     - 对结果做 JSON 解析、结构校验与基础静态校验
 
-    如果 prompt 模板不可用，则退化为基于设计信息的最小可执行 Diff Bundle，保证链路可用。
+    如果 LLM 没有返回可解析、可校验的 Diff Bundle，则明确失败，不生成伪造兜底代码。
     """
 
     def __init__(
@@ -154,9 +155,49 @@ class CodeGeneratorAgent(BaseAgent):
             len(prompt_payload.get("system", "")),
             len(prompt_payload.get("user", "")),
         )
-        raw_response = self._call_llm(prompt_payload)
-        self.logger.debug("LLM raw response received; chars=%d", len(raw_response or ""))
-        bundle = self._parse_response(raw_response, context)
+        max_attempts = max(1, int(os.environ.get("CODEGEN_MAX_ATTEMPTS", "5")))
+        last_error: Exception | None = None
+        last_response = ""
+
+        for attempt in range(1, max_attempts + 1):
+            raw_response = self._call_llm(prompt_payload)
+            last_response = raw_response or ""
+            self.logger.debug(
+                "LLM raw response received; attempt=%d/%d; chars=%d",
+                attempt,
+                max_attempts,
+                len(last_response),
+            )
+
+            try:
+                bundle = self._parse_response(last_response, context)
+                break
+            except ValueError as exc:
+                last_error = exc
+                self.logger.warning(
+                    "Code generation response rejected; attempt=%d/%d; error=%s",
+                    attempt,
+                    max_attempts,
+                    exc,
+                )
+                if attempt >= max_attempts:
+                    raise ValueError(
+                        "LLM code generation failed strict Diff Bundle validation "
+                        f"after {max_attempts} attempts. Last error: {exc}"
+                    ) from exc
+                prompt_payload = self._build_retry_prompt(
+                    original_payload=prompt_payload,
+                    invalid_response=last_response,
+                    error=exc,
+                    attempt=attempt + 1,
+                    max_attempts=max_attempts,
+                )
+        else:
+            raise ValueError(
+                "LLM code generation failed before producing a Diff Bundle. "
+                f"Last error: {last_error}; last response chars={len(last_response)}"
+            )
+
         self._enrich_validation(bundle)
         self.logger.info(
             "CodeGeneratorAgent.execute completed; patches=%d; files_changed=%d",
@@ -212,6 +253,32 @@ class CodeGeneratorAgent(BaseAgent):
             "user": f"{context_prompt}\n\n{instruction_prompt}",
         }
 
+    def _build_retry_prompt(
+        self,
+        original_payload: Dict[str, str],
+        invalid_response: str,
+        error: Exception,
+        attempt: int,
+        max_attempts: int,
+    ) -> Dict[str, str]:
+        """Build a corrective prompt that asks the LLM to regenerate, not explain."""
+
+        clipped_response = invalid_response[-6000:] if invalid_response else ""
+        retry_instruction = (
+            f"\n\n上一次代码生成输出未通过严格 Diff Bundle 校验，这是第 {attempt}/{max_attempts} 次重新生成。\n"
+            f"校验错误：{error}\n\n"
+            "上一次无效输出如下，只用于定位错误，不要照抄其格式问题：\n"
+            "----- INVALID OUTPUT START -----\n"
+            f"{clipped_response}\n"
+            "----- INVALID OUTPUT END -----\n\n"
+            "请重新生成完整结果。必须只返回一个可被 json.loads 直接解析的 JSON 对象；"
+            "必须包含完整文件内容；不要输出 Markdown、解释、注释占位、fallback、TODO 或伪代码。"
+        )
+        return {
+            "system": original_payload["system"],
+            "user": original_payload["user"] + retry_instruction,
+        }
+
     def _call_llm(self, prompt_payload: Dict[str, str]) -> str:
         """调用 LLM 生成代码。
         将提示词负载转换为标准的消息格式，调用 LLM 并返回响应内容。
@@ -241,7 +308,7 @@ class CodeGeneratorAgent(BaseAgent):
         1. 从原始响应中提取 JSON 字符串
         2. 解析 JSON 并使用 Pydantic 进行结构校验
         3. 转换为 DiffBundle 对象
-        4. 如果解析失败，使用降级策略生成最小变更包
+        4. 如果解析失败，抛出错误并由 Pipeline 展示 last_error
         Args:
             raw_response: LLM 返回的原始响应字符串
             context: 输入上下文字典，用于降级时生成变更包
@@ -266,12 +333,16 @@ class CodeGeneratorAgent(BaseAgent):
                     diff=bundle_schema.diff,
                     validation=bundle_schema.validation,
                 )
-            except Exception:
-                # 解析或校验失败，使用降级策略
-                pass
+            except Exception as exc:
+                raise ValueError(
+                    "LLM code generation output is not a valid Diff Bundle; "
+                    f"refusing to synthesize fallback files. Validation error: {exc}"
+                ) from exc
 
-        # 返回降级的最小变更包
-        return self._fallback_bundle(context)
+        raise ValueError(
+            "LLM code generation output did not contain JSON; "
+            "refusing to synthesize fallback files."
+        )
 
     def _extract_json(self, text: str) -> str:
         """从文本中提取 JSON 字符串。

@@ -51,7 +51,7 @@ def load_config_from_env(provider: str) -> Dict[str, Any]:
     }
 
     if provider == "doubao":
-        config["model"] = os.environ.get("DOUBAO_MODEL", "doubao-pro-32k")
+        config["model"] = os.environ.get("DOUBAO_MODEL", "doubao-seed-1-6-251015")
         config["api_key"] = os.environ.get("DOUBAO_API_KEY")
         config["base_url"] = os.environ.get(
             "DOUBAO_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"
@@ -176,7 +176,7 @@ def get_default_config_dict() -> Dict[str, Dict[str, Any]]:
     return {
         "doubao": {
             "provider": "doubao",
-            "model": "doubao-pro-32k",
+            "model": "doubao-seed-1-6-251015",
             "api_key": "your-doubao-api-key",
             "base_url": "https://ark.cn-beijing.volces.com/api/v3",
             "temperature": 0.7,

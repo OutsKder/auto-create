@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from typing import Any, Dict
 
 from .connectors.agent_connectors import execute_current_stage_agent
@@ -6,6 +8,16 @@ from .pipeline import Pipeline, PipelineStatus
 from .checkpoint import Checkpoint
 
 _PIPELINES: Dict[str, Pipeline] = {}
+logger = logging.getLogger(__name__)
+
+
+def _deep_merge(target: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _deep_merge(target[key], value)
+        else:
+            target[key] = value
+    return target
 
 
 def create_pipeline(context: Dict[str, Any] = None) -> Pipeline:
@@ -13,6 +25,12 @@ def create_pipeline(context: Dict[str, Any] = None) -> Pipeline:
     if context:
         pipeline.context.update(context)
     _PIPELINES[pipeline.id] = pipeline
+    logger.info(
+        "pipeline.create id=%s requirement=%s demo_mode=%s",
+        pipeline.id,
+        str(pipeline.context.get("requirement_raw") or "")[:160],
+        bool(pipeline.context.get("demo_mode")),
+    )
     return pipeline
 
 
@@ -32,16 +50,29 @@ def get_checkpoint(checkpoint_id: str) -> Checkpoint:
     raise KeyError(checkpoint_id)
 
 
-import asyncio
-
 def run_pipeline(pipeline_id: str) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
+    stage = pipeline.current_stage()
+    logger.info(
+        "pipeline.run id=%s status=%s stage=%s",
+        pipeline.id,
+        pipeline.status.value,
+        stage.id if stage else None,
+    )
     if pipeline.status == PipelineStatus.CREATED:
         pipeline.start()
     
     # 兼容老测试：同步运行 dispatcher
     from .dispatcher import dispatch_stage
     asyncio.run(dispatch_stage(pipeline))
+    next_stage = pipeline.current_stage()
+    logger.info(
+        "pipeline.run.complete id=%s status=%s stage=%s last_error=%s",
+        pipeline.id,
+        pipeline.status.value,
+        next_stage.id if next_stage else None,
+        pipeline.context.get("last_error"),
+    )
     return pipeline
 
 def run_agent_stages(pipeline_id: str) -> Pipeline:
@@ -90,9 +121,36 @@ def need_approval(pipeline_id: str) -> Pipeline:
     return pipeline
 
 
-def approve(pipeline_id: str, checkpoint_id: str | None = None) -> Pipeline:
+def approve(
+    pipeline_id: str,
+    checkpoint_id: str | None = None,
+    context_patch: Dict[str, Any] | None = None,
+    note: str = "",
+) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
+    logger.info(
+        "checkpoint.approve id=%s checkpoint=%s has_context_patch=%s note=%s",
+        pipeline.id,
+        checkpoint_id or pipeline.current_checkpoint_id,
+        bool(context_patch),
+        note[:160],
+    )
+    if context_patch:
+        _deep_merge(pipeline.context, context_patch)
+        pipeline.context.setdefault("human_edits", []).append(
+            {
+                "checkpoint_id": checkpoint_id or pipeline.current_checkpoint_id,
+                "note": note,
+                "context_patch": context_patch,
+            }
+        )
     pipeline.approve(checkpoint_id=checkpoint_id)
+    logger.info(
+        "checkpoint.approve.complete id=%s status=%s next_stage=%s",
+        pipeline.id,
+        pipeline.status.value,
+        pipeline.current_stage().id if pipeline.current_stage() else None,
+    )
     return pipeline
 
 
@@ -100,7 +158,27 @@ def reject(
     pipeline_id: str, checkpoint_id: str | None = None, note: str = ""
 ) -> Pipeline:
     pipeline = get_pipeline(pipeline_id)
+    logger.info(
+        "checkpoint.reject id=%s checkpoint=%s note=%s",
+        pipeline.id,
+        checkpoint_id or pipeline.current_checkpoint_id,
+        note[:240],
+    )
     pipeline.reject(checkpoint_id=checkpoint_id, note=note)
+    if note:
+        pipeline.context.setdefault("human_feedback", []).append(
+            {
+                "checkpoint_id": checkpoint_id,
+                "note": note,
+                "action": "regenerate_current_stage",
+            }
+        )
+    logger.info(
+        "checkpoint.reject.complete id=%s status=%s rerun_stage=%s",
+        pipeline.id,
+        pipeline.status.value,
+        pipeline.current_stage().id if pipeline.current_stage() else None,
+    )
     return pipeline
 
 

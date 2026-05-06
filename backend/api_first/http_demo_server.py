@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
+import mimetypes
 import sys
 from copy import deepcopy
+from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -25,6 +28,31 @@ from backend.api_first.service import (
 )
 
 DEFAULT_PORT = 8008
+LOG_DIR = PROJECT_ROOT / "backend" / "logs"
+LOGGER = logging.getLogger(__name__)
+
+
+def configure_logging() -> Path:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_file = LOG_DIR / f"server-{datetime.now().strftime('%Y-%m-%d')}.log"
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+    )
+
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[file_handler, console_handler],
+        force=True,
+    )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    return log_file
 
 
 def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
@@ -112,6 +140,33 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_file(
+        self,
+        path: Path,
+        *,
+        content_type: str | None = None,
+        download_name: str | None = None,
+    ) -> None:
+        if not path.exists() or not path.is_file():
+            self._send_json({"detail": "file not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        body = path.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header(
+            "Content-Type",
+            content_type or mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+        )
+        self.send_header("Content-Length", str(len(body)))
+        if download_name:
+            safe_name = download_name.encode("ascii", "ignore").decode("ascii") or path.name
+            self.send_header(
+                "Content-Disposition",
+                f"attachment; filename=\"{safe_name}\"; filename*=UTF-8''{quote(download_name)}",
+            )
+        self.end_headers()
+        self.wfile.write(body)
+
     def _read_json(self) -> Dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", "0"))
         if content_length <= 0:
@@ -126,6 +181,7 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parts = self._path_parts()
+        LOGGER.info("GET %s", self.path)
         try:
             if parts == ["pipelines"]:
                 self._send_json(
@@ -175,14 +231,38 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            if len(parts) == 3 and parts[0] == "deliveries" and parts[2] in {"download", "preview"}:
+                pipeline = get_pipeline(parts[1])
+                delivery = pipeline.context.get("delivery") or {}
+                package = delivery.get("delivery_package") or pipeline.context.get("delivery_package") or {}
+                if not isinstance(package, dict):
+                    self._send_json({"detail": "delivery package not ready"}, status=HTTPStatus.NOT_FOUND)
+                    return
+
+                if parts[2] == "download":
+                    zip_file = Path(str(package.get("zip_file") or ""))
+                    self._send_file(
+                        zip_file,
+                        content_type="application/zip",
+                        download_name=zip_file.name,
+                    )
+                    return
+
+                entry_file = Path(str(package.get("entry_file") or ""))
+                self._send_file(entry_file, content_type="text/html; charset=utf-8")
+                return
+
             self._send_json({"detail": "not found"}, status=HTTPStatus.NOT_FOUND)
         except KeyError:
+            LOGGER.warning("GET %s not found", self.path)
             self._send_json({"detail": "not found"}, status=HTTPStatus.NOT_FOUND)
         except Exception as exc:
+            LOGGER.exception("GET %s failed", self.path)
             self._send_json({"detail": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
     def do_POST(self) -> None:
         parts = self._path_parts()
+        LOGGER.info("POST %s", self.path)
         try:
             if parts == ["pipelines"]:
                 payload = self._read_json()
@@ -190,7 +270,7 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
                 requirement_raw = payload.get("requirement_raw", "")
                 if requirement_raw:
                     context["requirement_raw"] = requirement_raw
-                if payload.get("demo_mode", True):
+                if payload.get("demo_mode", False):
                     context["demo_mode"] = True
                 pipeline = create_pipeline(context=context)
                 self._send_json(_pipeline_to_dict(pipeline), status=HTTPStatus.CREATED)
@@ -204,9 +284,15 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
             if len(parts) == 3 and parts[0] == "checkpoints" and parts[2] in {"approve", "reject"}:
                 payload = self._read_json()
                 note = (payload.get("note") or "") if isinstance(payload, dict) else ""
+                context_patch = payload.get("context_patch") if isinstance(payload, dict) else None
                 checkpoint = get_checkpoint(parts[1])
                 if parts[2] == "approve":
-                    pipeline = approve(checkpoint.pipeline_id, checkpoint_id=checkpoint.id)
+                    pipeline = approve(
+                        checkpoint.pipeline_id,
+                        checkpoint_id=checkpoint.id,
+                        context_patch=context_patch if isinstance(context_patch, dict) else None,
+                        note=note,
+                    )
                 else:
                     pipeline = reject(checkpoint.pipeline_id, checkpoint_id=checkpoint.id, note=note)
                 self._send_json(_pipeline_to_dict(pipeline))
@@ -214,24 +300,32 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
 
             self._send_json({"detail": "not found"}, status=HTTPStatus.NOT_FOUND)
         except KeyError:
+            LOGGER.warning("POST %s not found", self.path)
             self._send_json({"detail": "not found"}, status=HTTPStatus.NOT_FOUND)
         except Exception as exc:
+            LOGGER.exception("POST %s failed", self.path)
             self._send_json({"detail": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
     def log_message(self, format: str, *args: Any) -> None:
-        return
+        LOGGER.info("HTTP %s - %s", self.address_string(), format % args)
 
 
 def main(port: int = DEFAULT_PORT) -> None:
+    log_file = configure_logging()
     server = ThreadingHTTPServer(("127.0.0.1", port), PipelineHTTPDemoHandler)
     print(f"API first demo server listening on http://127.0.0.1:{port}")
+    print(f"Log file: {log_file}")
     print("Endpoints: POST /pipelines, POST /pipelines/{id}/run, POST /checkpoints/{id}/approve, POST /checkpoints/{id}/reject")
+    LOGGER.info("API first demo server listening on http://127.0.0.1:%s", port)
+    LOGGER.info("Log file: %s", log_file)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nServer stopped.")
+        LOGGER.info("Server stopped by KeyboardInterrupt")
     finally:
         server.server_close()
+        LOGGER.info("Server closed")
 
 
 if __name__ == "__main__":
