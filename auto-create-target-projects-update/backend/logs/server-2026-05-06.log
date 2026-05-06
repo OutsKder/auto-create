@@ -1,0 +1,387 @@
+2026-05-06 18:06:57,173 INFO [__main__] API first demo server listening on http://127.0.0.1:8008
+2026-05-06 18:06:57,173 INFO [__main__] Log file: C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\logs\server-2026-05-06.log
+2026-05-06 18:07:02,623 INFO [__main__] GET /pipelines
+2026-05-06 18:07:02,623 INFO [__main__] HTTP 127.0.0.1 - "GET /pipelines HTTP/1.1" 200 -
+2026-05-06 18:07:16,435 INFO [__main__] POST /pipelines
+2026-05-06 18:07:16,435 INFO [backend.api_first.service] pipeline.create id=1d273ba5-fb8f-4e63-98e5-0da863e03355 requirement=生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。 demo_mode=False
+2026-05-06 18:07:16,435 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines HTTP/1.1" 201 -
+2026-05-06 18:07:16,451 INFO [__main__] POST /pipelines/1d273ba5-fb8f-4e63-98e5-0da863e03355/run
+2026-05-06 18:07:16,451 INFO [backend.api_first.service] pipeline.run id=1d273ba5-fb8f-4e63-98e5-0da863e03355 status=CREATED stage=analysis
+2026-05-06 18:07:16,453 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: analysis
+2026-05-06 18:07:16,562 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 18:07:16,804 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 18:07:25,041 INFO [openai._base_client] Retrying request to /chat/completions in 0.387156 seconds
+2026-05-06 18:07:33,314 INFO [openai._base_client] Retrying request to /chat/completions in 0.887853 seconds
+2026-05-06 18:07:41,710 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 18:07:41,711 WARNING [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parse failed, attempting retry fix: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:07:41,714 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for retry/fix of malformed JSON
+2026-05-06 18:07:50,139 INFO [openai._base_client] Retrying request to /chat/completions in 0.471621 seconds
+2026-05-06 18:07:58,075 INFO [openai._base_client] Retrying request to /chat/completions in 0.864285 seconds
+2026-05-06 18:08:06,546 ERROR [backend.agent.agents.requirement_analyst.RequirementAnalyst] Fatal error during RequirementAnalyst execution
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 88, in parse_result
+    return parse_json_markdown(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 163, in parse_json_markdown
+    return _parse_json(json_str, parser=parser)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 191, in _parse_json
+    return parser(json_str)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 136, in parse_partial_json
+    return json.loads(s, strict=strict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 97, in execute
+    result = self._parse_response(response, tracer)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 188, in _parse_response
+    return self._retry_with_fix(response.content, parse_e, tracer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 217, in _retry_with_fix
+    parsed = self.parser.parse(retry_response.content)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 91, in parse
+    return self.parse_result([Generation(text=text)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 75, in parse_result
+    json_object = super().parse_result(result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 91, in parse_result
+    raise OutputParserException(msg, llm_output=text) from e
+langchain_core.exceptions.OutputParserException: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:08:06,549 WARNING [backend.api_first.connectors.agent_connectors] Requirement analysis failed; attempt=1/3; error=RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:08:06,550 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 18:08:06,550 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 18:08:16,007 INFO [openai._base_client] Retrying request to /chat/completions in 0.466284 seconds
+2026-05-06 18:08:24,241 INFO [openai._base_client] Retrying request to /chat/completions in 0.775950 seconds
+2026-05-06 18:08:32,656 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 18:08:32,656 WARNING [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parse failed, attempting retry fix: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:08:32,657 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for retry/fix of malformed JSON
+2026-05-06 18:08:40,356 INFO [openai._base_client] Retrying request to /chat/completions in 0.419324 seconds
+2026-05-06 18:08:48,578 INFO [openai._base_client] Retrying request to /chat/completions in 0.841704 seconds
+2026-05-06 18:08:57,012 ERROR [backend.agent.agents.requirement_analyst.RequirementAnalyst] Fatal error during RequirementAnalyst execution
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 88, in parse_result
+    return parse_json_markdown(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 163, in parse_json_markdown
+    return _parse_json(json_str, parser=parser)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 191, in _parse_json
+    return parser(json_str)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 136, in parse_partial_json
+    return json.loads(s, strict=strict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 97, in execute
+    result = self._parse_response(response, tracer)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 188, in _parse_response
+    return self._retry_with_fix(response.content, parse_e, tracer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 217, in _retry_with_fix
+    parsed = self.parser.parse(retry_response.content)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 91, in parse
+    return self.parse_result([Generation(text=text)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 75, in parse_result
+    json_object = super().parse_result(result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 91, in parse_result
+    raise OutputParserException(msg, llm_output=text) from e
+langchain_core.exceptions.OutputParserException: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:08:57,013 WARNING [backend.api_first.connectors.agent_connectors] Requirement analysis failed; attempt=2/3; error=RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:08:57,014 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 18:08:57,014 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 18:09:05,677 INFO [openai._base_client] Retrying request to /chat/completions in 0.444869 seconds
+2026-05-06 18:09:14,660 INFO [openai._base_client] Retrying request to /chat/completions in 0.863697 seconds
+2026-05-06 18:09:23,350 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 18:09:23,350 WARNING [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parse failed, attempting retry fix: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:09:23,351 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for retry/fix of malformed JSON
+2026-05-06 18:09:31,006 INFO [openai._base_client] Retrying request to /chat/completions in 0.415344 seconds
+2026-05-06 18:09:39,245 INFO [openai._base_client] Retrying request to /chat/completions in 0.850483 seconds
+2026-05-06 18:09:40,557 ERROR [backend.agent.agents.requirement_analyst.RequirementAnalyst] Fatal error during RequirementAnalyst execution
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 88, in parse_result
+    return parse_json_markdown(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 163, in parse_json_markdown
+    return _parse_json(json_str, parser=parser)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 191, in _parse_json
+    return parser(json_str)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 136, in parse_partial_json
+    return json.loads(s, strict=strict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 97, in execute
+    result = self._parse_response(response, tracer)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 188, in _parse_response
+    return self._retry_with_fix(response.content, parse_e, tracer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 217, in _retry_with_fix
+    parsed = self.parser.parse(retry_response.content)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 91, in parse
+    return self.parse_result([Generation(text=text)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 75, in parse_result
+    json_object = super().parse_result(result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 91, in parse_result
+    raise OutputParserException(msg, llm_output=text) from e
+langchain_core.exceptions.OutputParserException: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:09:40,558 WARNING [backend.api_first.connectors.agent_connectors] Requirement analysis failed; attempt=3/3; error=RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:09:40,558 ERROR [backend.api_first.connectors.agent_connectors] Error executing stage analysis
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 88, in parse_result
+    return parse_json_markdown(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 163, in parse_json_markdown
+    return _parse_json(json_str, parser=parser)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 191, in _parse_json
+    return parser(json_str)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\utils\json.py", line 136, in parse_partial_json
+    return json.loads(s, strict=strict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 97, in execute
+    result = self._parse_response(response, tracer)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 188, in _parse_response
+    return self._retry_with_fix(response.content, parse_e, tracer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 217, in _retry_with_fix
+    parsed = self.parser.parse(retry_response.content)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 91, in parse
+    return self.parse_result([Generation(text=text)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\pydantic.py", line 75, in parse_result
+    json_object = super().parse_result(result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\miniconda3\envs\byte\Lib\site-packages\langchain_core\output_parsers\json.py", line 91, in parse_result
+    raise OutputParserException(msg, llm_output=text) from e
+langchain_core.exceptions.OutputParserException: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\api_first\connectors\agent_connectors.py", line 84, in _execute_requirement_analysis
+    result = await _run_agent_execute(agent, pipeline.context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\api_first\connectors\agent_connectors.py", line 51, in _run_agent_execute
+    result = agent.execute(context)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\agent\agents\requirement_analyst.py", line 100, in execute
+    raise RuntimeError(f"RequirementAnalyst 执行过程中发生致命错误: {str(e)}")
+RuntimeError: RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\api_first\connectors\agent_connectors.py", line 307, in dispatch_stage
+    success = await success
+              ^^^^^^^^^^^^^
+  File "C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\api_first\connectors\agent_connectors.py", line 105, in _execute_requirement_analysis
+    raise RuntimeError(
+RuntimeError: RequirementAnalyst 多次重试后仍失败。请检查模型网络连通性或结构化输出稳定性。最后错误: RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:09:40,559 INFO [backend.api_first.service] pipeline.run.complete id=1d273ba5-fb8f-4e63-98e5-0da863e03355 status=RUNNING stage=analysis last_error=analysis: RequirementAnalyst 多次重试后仍失败。请检查模型网络连通性或结构化输出稳定性。最后错误: RequirementAnalyst 执行过程中发生致命错误: Invalid json output: 请求失败: Connection error.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+2026-05-06 18:09:40,560 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/1d273ba5-fb8f-4e63-98e5-0da863e03355/run HTTP/1.1" 200 -
+2026-05-06 18:09:42,582 INFO [__main__] GET /pipelines/1d273ba5-fb8f-4e63-98e5-0da863e03355
+2026-05-06 18:09:42,582 INFO [__main__] HTTP 127.0.0.1 - "GET /pipelines/1d273ba5-fb8f-4e63-98e5-0da863e03355 HTTP/1.1" 200 -
+2026-05-06 18:09:44,330 INFO [__main__] POST /pipelines
+2026-05-06 18:09:44,330 INFO [backend.api_first.service] pipeline.create id=84b587c4-163b-4b28-ba19-5efc2546e423 requirement=生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。 demo_mode=False
+2026-05-06 18:09:44,330 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines HTTP/1.1" 201 -
+2026-05-06 18:09:44,339 INFO [__main__] POST /pipelines/84b587c4-163b-4b28-ba19-5efc2546e423/run
+2026-05-06 18:09:44,339 INFO [backend.api_first.service] pipeline.run id=84b587c4-163b-4b28-ba19-5efc2546e423 status=CREATED stage=analysis
+2026-05-06 18:09:44,340 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: analysis
+2026-05-06 18:09:44,343 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 18:09:44,343 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 18:10:21,389 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 18:10:21,390 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parsing successful
+2026-05-06 18:10:21,390 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Requirement analysis completed successfully
+2026-05-06 18:10:21,392 INFO [backend.api_first.connectors.agent_connectors] ==> Stage analysis done. Waiting for approval.
+2026-05-06 18:10:21,392 INFO [backend.api_first.service] pipeline.run.complete id=84b587c4-163b-4b28-ba19-5efc2546e423 status=WAITING_APPROVAL stage=analysis last_error=None
+2026-05-06 18:10:21,393 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/84b587c4-163b-4b28-ba19-5efc2546e423/run HTTP/1.1" 200 -
+2026-05-06 18:11:06,884 INFO [__main__] POST /checkpoints/7134476e-d824-4ed2-880c-6e57096defb4/approve
+2026-05-06 18:11:06,884 INFO [backend.api_first.service] checkpoint.approve id=84b587c4-163b-4b28-ba19-5efc2546e423 checkpoint=7134476e-d824-4ed2-880c-6e57096defb4 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:11:06,884 INFO [backend.api_first.service] checkpoint.approve.complete id=84b587c4-163b-4b28-ba19-5efc2546e423 status=RUNNING next_stage=design
+2026-05-06 18:11:06,885 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/7134476e-d824-4ed2-880c-6e57096defb4/approve HTTP/1.1" 200 -
+2026-05-06 18:11:06,891 INFO [__main__] POST /pipelines/84b587c4-163b-4b28-ba19-5efc2546e423/run
+2026-05-06 18:11:06,891 INFO [backend.api_first.service] pipeline.run id=84b587c4-163b-4b28-ba19-5efc2546e423 status=RUNNING stage=design
+2026-05-06 18:11:06,892 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: design
+2026-05-06 18:11:06,894 INFO [backend.agent.agents.tech_architect.TechArchitect] TechArchitect.execute started
+2026-05-06 18:11:06,894 INFO [backend.agent.agents.tech_architect.TechArchitect] Extracting codebase context; repo_path=
+2026-05-06 18:11:06,894 INFO [backend.agent.agents.tech_architect.TechArchitect] Codebase context extraction completed; elapsed=0.00s; hot_files=0
+2026-05-06 18:11:06,897 INFO [backend.agent.agents.tech_architect.TechArchitect] Invoking LLM for technical design
+2026-05-06 18:12:39,245 INFO [backend.agent.agents.tech_architect.TechArchitect] LLM invocation complete for technical design
+2026-05-06 18:12:39,247 INFO [backend.agent.agents.tech_architect.TechArchitect] TechArchitect.execute completed successfully
+2026-05-06 18:12:39,251 INFO [backend.api_first.connectors.agent_connectors] ==> Stage design done. Waiting for approval.
+2026-05-06 18:12:39,251 INFO [backend.api_first.service] pipeline.run.complete id=84b587c4-163b-4b28-ba19-5efc2546e423 status=WAITING_APPROVAL stage=design last_error=None
+2026-05-06 18:12:39,252 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/84b587c4-163b-4b28-ba19-5efc2546e423/run HTTP/1.1" 200 -
+2026-05-06 18:13:15,241 INFO [__main__] POST /pipelines
+2026-05-06 18:13:15,241 INFO [backend.api_first.service] pipeline.create id=ac566dcf-ae05-47f9-ae75-89575e891f3e requirement=生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。 demo_mode=False
+2026-05-06 18:13:15,241 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines HTTP/1.1" 201 -
+2026-05-06 18:13:15,248 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:13:15,249 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=CREATED stage=analysis
+2026-05-06 18:13:15,250 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: analysis
+2026-05-06 18:13:15,251 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 18:13:15,252 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 18:14:08,754 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 18:14:08,755 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parsing successful
+2026-05-06 18:14:08,755 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Requirement analysis completed successfully
+2026-05-06 18:14:08,758 INFO [backend.api_first.connectors.agent_connectors] ==> Stage analysis done. Waiting for approval.
+2026-05-06 18:14:08,758 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=analysis last_error=None
+2026-05-06 18:14:08,760 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:14:54,371 INFO [__main__] POST /checkpoints/44308e0a-b0af-48b3-8541-2fc7154ece78/approve
+2026-05-06 18:14:54,371 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=44308e0a-b0af-48b3-8541-2fc7154ece78 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:14:54,371 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING next_stage=design
+2026-05-06 18:14:54,372 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/44308e0a-b0af-48b3-8541-2fc7154ece78/approve HTTP/1.1" 200 -
+2026-05-06 18:14:54,378 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:14:54,378 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING stage=design
+2026-05-06 18:14:54,379 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: design
+2026-05-06 18:14:54,382 INFO [backend.agent.agents.tech_architect.TechArchitect] TechArchitect.execute started
+2026-05-06 18:14:54,382 INFO [backend.agent.agents.tech_architect.TechArchitect] Extracting codebase context; repo_path=
+2026-05-06 18:14:54,382 INFO [backend.agent.agents.tech_architect.TechArchitect] Codebase context extraction completed; elapsed=0.00s; hot_files=0
+2026-05-06 18:14:54,383 INFO [backend.agent.agents.tech_architect.TechArchitect] Invoking LLM for technical design
+2026-05-06 18:16:15,913 INFO [backend.agent.agents.tech_architect.TechArchitect] LLM invocation complete for technical design
+2026-05-06 18:16:15,914 INFO [backend.agent.agents.tech_architect.TechArchitect] TechArchitect.execute completed successfully
+2026-05-06 18:16:15,917 INFO [backend.api_first.connectors.agent_connectors] ==> Stage design done. Waiting for approval.
+2026-05-06 18:16:15,918 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=design last_error=None
+2026-05-06 18:16:15,919 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:16:40,841 INFO [__main__] POST /checkpoints/f1721de2-ab50-423a-a08a-80d089003821/approve
+2026-05-06 18:16:40,841 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=f1721de2-ab50-423a-a08a-80d089003821 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:16:40,841 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING next_stage=coding
+2026-05-06 18:16:40,842 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/f1721de2-ab50-423a-a08a-80d089003821/approve HTTP/1.1" 200 -
+2026-05-06 18:16:40,847 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:16:40,847 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING stage=coding
+2026-05-06 18:16:40,848 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: coding
+2026-05-06 18:16:40,852 INFO [backend.agent.codegen.code_generator.CodeGeneratorAgent] CodeGeneratorAgent.execute started; repo_root=C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update
+2026-05-06 18:18:07,875 WARNING [backend.agent.codegen.code_generator.CodeGeneratorAgent] Code generation response rejected; attempt=1/5; error=LLM code generation output is not a valid Diff Bundle; refusing to synthesize fallback files. Validation error: Unterminated string starting at: line 10 column 22 (char 316)
+2026-05-06 18:18:57,016 INFO [backend.agent.codegen.code_generator.CodeGeneratorAgent] CodeGeneratorAgent.execute completed; patches=4; files_changed=4
+2026-05-06 18:18:57,027 INFO [backend.api_first.connectors.agent_connectors] ==> Stage coding done. Waiting for approval.
+2026-05-06 18:18:57,028 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=coding last_error=None
+2026-05-06 18:18:57,029 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:19:07,156 INFO [__main__] POST /checkpoints/65703596-7b1a-4db0-9b20-95ed4c8d1b09/approve
+2026-05-06 18:19:07,156 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=65703596-7b1a-4db0-9b20-95ed4c8d1b09 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:19:07,156 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING next_stage=testing
+2026-05-06 18:19:07,157 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/65703596-7b1a-4db0-9b20-95ed4c8d1b09/approve HTTP/1.1" 200 -
+2026-05-06 18:19:07,163 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:19:07,163 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING stage=testing
+2026-05-06 18:19:07,164 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: testing
+2026-05-06 18:20:31,558 INFO [backend.api_first.connectors.agent_connectors] ==> Stage testing done. Waiting for approval.
+2026-05-06 18:20:31,559 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=testing last_error=None
+2026-05-06 18:20:31,561 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:20:34,199 INFO [__main__] POST /checkpoints/2e5cdd0b-5cdd-4188-a5cd-fe81d8f6d7d7/approve
+2026-05-06 18:20:34,199 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=2e5cdd0b-5cdd-4188-a5cd-fe81d8f6d7d7 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:20:34,199 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING next_stage=review
+2026-05-06 18:20:34,201 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/2e5cdd0b-5cdd-4188-a5cd-fe81d8f6d7d7/approve HTTP/1.1" 200 -
+2026-05-06 18:20:34,209 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:20:34,210 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING stage=review
+2026-05-06 18:20:34,211 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: review
+2026-05-06 18:20:34,216 INFO [backend.api_first.connectors.agent_connectors] ==> Stage review done. Waiting for approval.
+2026-05-06 18:20:34,217 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=review last_error=None
+2026-05-06 18:20:34,221 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:20:35,483 INFO [__main__] POST /checkpoints/092c8503-bfce-4332-930e-e2f31946f813/approve
+2026-05-06 18:20:35,483 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=092c8503-bfce-4332-930e-e2f31946f813 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:20:35,483 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING next_stage=delivery
+2026-05-06 18:20:35,485 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/092c8503-bfce-4332-930e-e2f31946f813/approve HTTP/1.1" 200 -
+2026-05-06 18:20:35,491 INFO [__main__] POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run
+2026-05-06 18:20:35,491 INFO [backend.api_first.service] pipeline.run id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=RUNNING stage=delivery
+2026-05-06 18:20:35,492 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: delivery
+2026-05-06 18:20:35,498 INFO [backend.api_first.connectors.agent_connectors] ==> Stage delivery done. Waiting for approval.
+2026-05-06 18:20:35,498 INFO [backend.api_first.service] pipeline.run.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=WAITING_APPROVAL stage=delivery last_error=None
+2026-05-06 18:20:35,501 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ac566dcf-ae05-47f9-ae75-89575e891f3e/run HTTP/1.1" 200 -
+2026-05-06 18:20:37,154 INFO [__main__] POST /checkpoints/a6cb5bba-6e83-4972-a9f6-7c1ac66ca022/approve
+2026-05-06 18:20:37,154 INFO [backend.api_first.service] checkpoint.approve id=ac566dcf-ae05-47f9-ae75-89575e891f3e checkpoint=a6cb5bba-6e83-4972-a9f6-7c1ac66ca022 has_context_patch=False note=用户认可当前 AI 产物，直接进入下一阶段。
+2026-05-06 18:20:37,155 INFO [backend.api_first.service] checkpoint.approve.complete id=ac566dcf-ae05-47f9-ae75-89575e891f3e status=FINISHED next_stage=delivery
+2026-05-06 18:20:37,156 INFO [__main__] HTTP 127.0.0.1 - "POST /checkpoints/a6cb5bba-6e83-4972-a9f6-7c1ac66ca022/approve HTTP/1.1" 200 -
+2026-05-06 19:37:18,956 INFO [__main__] API first demo server listening on http://127.0.0.1:8008
+2026-05-06 19:37:18,956 INFO [__main__] Log file: C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\logs\server-2026-05-06.log
+2026-05-06 19:37:25,634 INFO [__main__] GET /pipelines
+2026-05-06 19:37:25,634 INFO [__main__] HTTP 127.0.0.1 - "GET /pipelines HTTP/1.1" 200 -
+2026-05-06 19:40:37,054 INFO [__main__] API first demo server listening on http://127.0.0.1:8008
+2026-05-06 19:40:37,055 INFO [__main__] Log file: C:\Users\mechrevo\OneDrive\Desktop\byte\auto-create-target-projects-update\backend\logs\server-2026-05-06.log
+2026-05-06 19:40:50,256 INFO [__main__] POST /pipelines
+2026-05-06 19:40:50,256 INFO [backend.api_first.service] pipeline.create id=ab2ca0b8-2814-42ad-8448-1786762ebaa1 requirement=生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。 demo_mode=False
+2026-05-06 19:40:50,256 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines HTTP/1.1" 201 -
+2026-05-06 19:40:50,275 INFO [__main__] POST /pipelines/ab2ca0b8-2814-42ad-8448-1786762ebaa1/run
+2026-05-06 19:40:50,275 INFO [backend.api_first.service] pipeline.run id=ab2ca0b8-2814-42ad-8448-1786762ebaa1 status=CREATED stage=analysis
+2026-05-06 19:40:50,279 INFO [backend.api_first.connectors.agent_connectors] ==> Dispatching stage: analysis
+2026-05-06 19:40:50,419 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] RequirementAnalyst.execute started; requirement_chars=28
+2026-05-06 19:40:50,755 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Invoking LLM for requirement analysis
+2026-05-06 19:41:35,881 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] LLM invocation complete for requirement analysis
+2026-05-06 19:41:35,882 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Parsing successful
+2026-05-06 19:41:35,882 INFO [backend.agent.agents.requirement_analyst.RequirementAnalyst] Requirement analysis completed successfully
+2026-05-06 19:41:35,886 INFO [backend.api_first.connectors.agent_connectors] ==> Stage analysis done. Waiting for approval.
+2026-05-06 19:41:35,886 INFO [backend.api_first.service] pipeline.run.complete id=ab2ca0b8-2814-42ad-8448-1786762ebaa1 status=WAITING_APPROVAL stage=analysis last_error=None
+2026-05-06 19:41:35,886 INFO [__main__] HTTP 127.0.0.1 - "POST /pipelines/ab2ca0b8-2814-42ad-8448-1786762ebaa1/run HTTP/1.1" 200 -

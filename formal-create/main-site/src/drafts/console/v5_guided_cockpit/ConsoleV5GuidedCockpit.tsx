@@ -295,7 +295,7 @@ export default function ConsoleV5GuidedCockpit() {
           </div>
         </header>
 
-        <section className="grid flex-1 gap-5 py-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <section className="grid flex-1 gap-5 py-5 lg:grid-cols-[340px_minmax(0,1fr)]">
           <aside className="space-y-4">
             <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
@@ -345,6 +345,28 @@ export default function ConsoleV5GuidedCockpit() {
               </button>
             </div>
 
+            <DeveloperDetails pipeline={pipeline} />
+          </aside>
+
+          <section className="space-y-4">
+            <GuidedProgressCard
+              state={state}
+              isBusy={isBusy}
+              currentStageId={currentStageId}
+              currentStage={currentStage}
+              lastError={lastError}
+            />
+
+            <StageTimeline stages={pipeline?.stages} currentStageId={currentStageId} state={state} />
+
+            {notice && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+                {notice}
+              </div>
+            )}
+
+            <DeliveryActions pipeline={pipeline} />
+
             <StageDecisionGate
               state={state}
               checkpointTitle={pipeline?.checkpoint?.title}
@@ -358,30 +380,8 @@ export default function ConsoleV5GuidedCockpit() {
               onEditAndContinue={editAndContinue}
               onReject={rejectAndRevise}
             />
-          </aside>
-
-          <section className="space-y-4">
-            <GuidedProgressCard
-              state={state}
-              isBusy={isBusy}
-              currentStageId={currentStageId}
-              currentStage={currentStage}
-              lastError={lastError}
-            />
-
-            {notice && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-                {notice}
-              </div>
-            )}
-
-            <StageTimeline stages={pipeline?.stages} currentStageId={currentStageId} state={state} />
 
             <AiResultSummary pipeline={pipeline} />
-
-            <DeliveryActions pipeline={pipeline} />
-
-            <DeveloperDetails pipeline={pipeline} />
           </section>
         </section>
       </div>
@@ -552,6 +552,32 @@ function AiResultSummary({ pipeline }: { pipeline: Pipeline | null }) {
   const stageId = pipeline?.checkpoint?.stageId || pipeline?.currentStage?.id || "analysis";
   const summary = buildHumanSummary(stageId, context, pipeline?.state);
 
+  if (pipeline?.state === "WAITING_APPROVAL") {
+    return (
+      <details className="group rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Read-only Summary</div>
+            <h3 className="mt-1 text-base font-semibold text-zinc-950">查看 AI 草稿摘要</h3>
+            <p className="mt-1 text-sm leading-6 text-zinc-500">
+              主操作区已经提供可编辑草稿；这里仅用于快速回看 AI 的只读摘要。
+            </p>
+          </div>
+          <ChevronDown className="h-4 w-4 flex-none text-zinc-400 transition-transform group-open:rotate-180" />
+        </summary>
+
+        <div className="mt-5 grid gap-3">
+          {summary.items.map((item) => (
+            <div key={item.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-medium text-zinc-400">{item.label}</div>
+              <div className="mt-1 text-sm leading-6 text-zinc-800">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
   return (
     <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -701,52 +727,56 @@ function StageDecisionGate({
 
       {canApprove && (
         <div className="mt-4 space-y-4">
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-            <div className="text-xs font-semibold text-blue-900">你正在审批什么</div>
-            <p className="mt-1 text-sm leading-6 text-blue-900/75">{decision.object}</p>
-            <div className="mt-3 text-xs font-semibold text-blue-900">重点看</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {decision.criteria.map((item) => (
-                <span key={item} className="rounded-full border border-blue-200 bg-white px-2 py-1 text-[11px] text-blue-800">
-                  {item}
-                </span>
-              ))}
+          <div className="overflow-hidden rounded-[1.75rem] border border-zinc-200 bg-gradient-to-b from-white to-zinc-50">
+            <div className="border-b border-zinc-200/70 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Editable Draft</div>
+                  <h3 className="mt-1 text-lg font-semibold tracking-tight text-zinc-950">当前阶段草稿</h3>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">{decision.object}</p>
+                </div>
+                <div className="flex max-w-xl flex-wrap gap-2">
+                  {decision.criteria.map((item) => (
+                    <span key={item} className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-500">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5">
+              <StageEditableForm
+                stageId={currentStageId}
+                draft={editableDraft}
+                onDraftChange={onDraftChange}
+              />
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onApprove}
-            disabled={isBusy}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-          >
-            {decision.passLabel}
-            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-          </button>
-
-          <details className="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-zinc-950">修改后继续</div>
-                <div className="mt-1 text-xs leading-5 text-zinc-500">{decision.editHint}</div>
-              </div>
-              <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
-            </summary>
-            <StageEditableForm
-              stageId={currentStageId}
-              draft={editableDraft}
-              onDraftChange={onDraftChange}
-            />
-            <button
-              type="button"
-              onClick={onEditAndContinue}
-              disabled={isBusy}
-              className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-            >
-              {decision.editLabel}
-              {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            </button>
-          </details>
+          <div className="rounded-[1.5rem] border border-zinc-200 bg-white p-4">
+            <div className="grid gap-2 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={onEditAndContinue}
+                disabled={isBusy}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+              >
+                {decision.editLabel}
+                {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={onApprove}
+                disabled={isBusy}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+              >
+                不修改，直接继续
+                {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">{decision.editHint}</p>
+          </div>
 
           <details className="group rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">

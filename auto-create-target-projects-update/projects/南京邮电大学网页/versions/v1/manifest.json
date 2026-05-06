@@ -1,0 +1,15 @@
+{
+  "pipeline_id": "62ffda29-6b9b-448e-98cd-94f1c170064a",
+  "project_title": "南京邮电大学网页",
+  "project_key": "南京邮电大学网页",
+  "version": "v1",
+  "created_at": "2026-05-06T11:37:37.963454+00:00",
+  "requirement": "生成一个网页，上面只有六个字“南京邮电大学”。",
+  "entry_file": "workspace/index.html",
+  "files": [
+    {
+      "path": "index.html",
+      "size": 59
+    }
+  ]
+}
