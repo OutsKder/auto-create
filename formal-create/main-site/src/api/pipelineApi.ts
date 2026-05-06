@@ -359,6 +359,14 @@ function normalizeMockPipeline(record: MockPipelineRecord): Pipeline {
 }
 
 export const pipelineApi = {
+  deliveryPreviewUrl(pipelineId: string): string {
+    return hasBackend() ? `${API_BASE_URL}/deliveries/${pipelineId}/preview` : "#";
+  },
+
+  deliveryDownloadUrl(pipelineId: string): string {
+    return hasBackend() ? `${API_BASE_URL}/deliveries/${pipelineId}/download` : "#";
+  },
+
   async createPipeline(input: CreatePipelineInput): Promise<Pipeline> {
     if (hasBackend()) {
       const data = await requestBackend<BackendPipeline>("/pipelines", {

@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleDashed,
+  Download,
+  ExternalLink,
   FileText,
   Loader2,
   Play,
@@ -377,6 +379,8 @@ export default function ConsoleV5GuidedCockpit() {
 
             <AiResultSummary pipeline={pipeline} />
 
+            <DeliveryActions pipeline={pipeline} />
+
             <DeveloperDetails pipeline={pipeline} />
           </section>
         </section>
@@ -566,6 +570,86 @@ function AiResultSummary({ pipeline }: { pipeline: Pipeline | null }) {
             <div className="mt-1 text-sm leading-6 text-zinc-800">{item.value}</div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DeliveryActions({ pipeline }: { pipeline: Pipeline | null }) {
+  if (!pipeline) return null;
+
+  const context = pipeline.context || {};
+  const delivery = asRecord(context.delivery);
+  const deliveryPackage = asRecord(delivery.delivery_package || context.delivery_package);
+  if (!Object.keys(deliveryPackage).length && pipeline.state !== "FINISHED") {
+    return null;
+  }
+
+  const projectTitle = asString(delivery.project_title) || asString(deliveryPackage.project_title) || "AI 生成项目";
+  const version = asString(delivery.version) || asString(deliveryPackage.version) || "v1";
+  const files = asArray(deliveryPackage.files).map((item) => asRecord(item));
+  const canDownload = Boolean(asString(delivery.download_url) || asString(deliveryPackage.download_url));
+  const canPreview = Boolean(asString(delivery.preview_url) || asString(deliveryPackage.preview_url));
+
+  return (
+    <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-700/60">Delivery Package</div>
+          <h3 className="mt-1 text-lg font-semibold text-emerald-950">{projectTitle}</h3>
+          <p className="mt-1 text-sm leading-6 text-emerald-900/65">
+            {version} · 已生成可交付项目包。你可以打开预览，也可以下载完整文件。
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={pipelineApi.deliveryPreviewUrl(pipeline.id)}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!canPreview}
+            className={`inline-flex h-10 items-center gap-2 rounded-2xl px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+              canPreview
+                ? "bg-white text-emerald-900 hover:bg-emerald-100"
+                : "pointer-events-none bg-white/60 text-emerald-900/35"
+            }`}
+          >
+            打开预览
+            <ExternalLink className="h-4 w-4" />
+          </a>
+          <a
+            href={pipelineApi.deliveryDownloadUrl(pipeline.id)}
+            aria-disabled={!canDownload}
+            className={`inline-flex h-10 items-center gap-2 rounded-2xl px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+              canDownload
+                ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                : "pointer-events-none bg-emerald-700/40 text-white/70"
+            }`}
+          >
+            下载项目 ZIP
+            <Download className="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-200 bg-white p-4">
+          <div className="text-xs font-semibold text-emerald-900">验收状态</div>
+          <p className="mt-1 text-sm leading-6 text-emerald-900/70">
+            {delivery.test_passed === true
+              ? "测试已通过，可以人工验收。"
+              : delivery.test_passed === false
+              ? "测试未完全通过，请先查看问题再交付。"
+              : "等待测试结果。"}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-emerald-200 bg-white p-4">
+          <div className="text-xs font-semibold text-emerald-900">包含文件</div>
+          <p className="mt-1 text-sm leading-6 text-emerald-900/70">
+            {files.length
+              ? files.slice(0, 5).map((file) => asString(file.path)).filter(Boolean).join("、")
+              : "等待交付文件清单。"}
+          </p>
+        </div>
       </div>
     </div>
   );
