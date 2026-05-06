@@ -20,7 +20,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { pipelineApi } from "../../../api/pipelineApi";
-import type { PipelineState } from "../../../api/pipelineApi";
+import type { Pipeline, PipelineStage, PipelineState, StageStatus } from "../../../api/pipelineApi";
 import WeaveMark from "../../../components/WeaveMark";
 
 type RoleKey = "first" | "product" | "tech" | "manager";
@@ -65,12 +65,12 @@ const ROLE_LENS: Record<RoleKey, RoleLens> = {
       "先输入一句需求。系统会解释每个状态、每个产物，以及什么时候需要你做判断。",
     inputTitle: "告诉我你想做什么",
     inputHint: "不用写 PRD，也不用懂技术术语。",
-    placeholder: "例如：我想给博客增加评论功能，需要能审核评论。",
+    placeholder: "例如：生成一个网站，上面四个字“织界引擎”。",
     outputHint: "你会看到：需求解释、当前状态、审批提醒、下一步建议。",
     templates: [
-      "我想给博客增加评论功能，需要能审核评论。",
-      "我想做一个团队知识库搜索页，能搜索 Markdown 文档。",
-      "我想给订单系统增加退款审批流程。",
+      "生成一个网站，上面四个字“织界引擎”。",
+      "做一个团队知识库搜索页，能搜索 Markdown 文档。",
+      "生成一个可打开的单页作品集网站。",
     ],
     previewTitle: "新手引导预览",
     previewHint: "每个节点都会解释“发生了什么”和“你要做什么”。",
@@ -100,12 +100,12 @@ const ROLE_LENS: Record<RoleKey, RoleLens> = {
     inputTitle: "描述业务目标",
     inputHint: "写清用户、场景、边界和验收口径。",
     placeholder:
-      "例如：给博客增加评论功能，支持登录用户评论、管理员审核、敏感词过滤。",
+      "例如：生成一个网站，上面四个字“织界引擎”，并产出可打开的 HTML。",
     outputHint: "预估会生成：用户故事、边界条件、验收标准、审批建议。",
     templates: [
-      "给博客增加评论功能，支持登录用户评论、管理员审核、敏感词过滤。",
-      "为订单系统增加退款审批流程，需要保留完整操作日志。",
+      "生成一个网站，上面四个字“织界引擎”，并产出可打开的 HTML。",
       "做一个团队知识库搜索页，支持 Markdown 文档和语义检索。",
+      "生成一个可打开的单页作品集网站，包含头像、简介和联系方式。",
     ],
     previewTitle: "需求理解预览",
     previewHint: "默认先看 AI 是否正确理解业务意图。",
@@ -135,11 +135,11 @@ const ROLE_LENS: Record<RoleKey, RoleLens> = {
     inputTitle: "描述工程任务",
     inputHint: "可以补充技术约束、接口、数据模型或兼容性要求。",
     placeholder:
-      "例如：为订单系统增加退款审批流程，需要保留操作日志并兼容现有状态机。",
+      "例如：生成一个静态官网首页，包含标题、介绍和按钮。",
     outputHint: "预估会生成：架构方案、接口设计、代码 Diff、测试报告、MR 链接。",
     templates: [
-      "为订单系统增加退款审批流程，需要保留操作日志并兼容现有状态机。",
-      "给评论功能增加敏感词过滤，要求可配置词库和单元测试。",
+      "生成一个静态官网首页，包含标题、介绍和按钮。",
+      "生成一个可配置文案的单页展示网站。",
       "为知识库搜索增加语义检索 API，并保留关键词搜索兜底。",
     ],
     previewTitle: "工程执行预览",
@@ -169,12 +169,12 @@ const ROLE_LENS: Record<RoleKey, RoleLens> = {
       "默认突出流水线状态、审批等待、风险摘要和交付结果，帮助你快速判断项目是否可控。",
     inputTitle: "创建交付事项",
     inputHint: "用业务语言描述目标即可，系统会拆成可跟踪流程。",
-    placeholder: "例如：本周完成评论功能闭环，要求可审核、可测试、可交付 MR。",
+    placeholder: "例如：今天完成一个可打开的静态网页，并输出本地项目目录。",
     outputHint: "预估会生成：进度总览、阻塞点、风险提示、交付摘要。",
     templates: [
-      "本周完成评论功能闭环，要求可审核、可测试、可交付 MR。",
-      "推进退款审批流程上线，重点关注风险、阻塞和审批等待。",
-      "完成知识库搜索 MVP，要求能看到进度、风险和最终交付物。",
+      "今天完成一个可打开的静态网页，并输出本地项目目录。",
+      "完成一个团队知识库搜索 MVP，要求能看到进度、风险和最终交付物。",
+      "生成一个产品介绍页，要求可测试、可交付。",
     ],
     previewTitle: "交付状态预览",
     previewHint: "默认先看是否阻塞、是否需要审批、是否接近交付。",
@@ -197,8 +197,7 @@ const ROLE_LENS: Record<RoleKey, RoleLens> = {
 
 const roleOrder: RoleKey[] = ["first", "product", "tech", "manager"];
 
-const DEMO_REQUIREMENT =
-  "给博客增加评论功能：登录用户可评论，管理员可审核，敏感词自动拦截，并生成可合并 MR。";
+const DEMO_REQUIREMENT = "生成一个网站，上面四个字“织界引擎”。";
 
 export default function ConsoleV4EntryCockpit() {
   const [selectedRole, setSelectedRole] = useState<RoleKey>("first");
@@ -209,6 +208,7 @@ export default function ConsoleV4EntryCockpit() {
   const [hasApproved, setHasApproved] = useState(false);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [checkpointId, setCheckpointId] = useState<string | null>(null);
+  const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [isApiBusy, setIsApiBusy] = useState(false);
   const activeLens = ROLE_LENS[selectedRole];
 
@@ -216,23 +216,49 @@ export default function ConsoleV4EntryCockpit() {
 
   const projectStage: ProjectStage = hasCreated ? "running" : hasPlan ? "planned" : "empty";
 
-  async function refreshPipeline(id: string) {
-    const pipeline = await pipelineApi.getPipeline(id);
-    setPipelineState(pipeline.state);
-    setCheckpointId(pipeline.checkpoint?.id ?? null);
+  function pollPipelineUntilSettled(id: string, attempts = 90) {
+    window.setTimeout(async () => {
+      try {
+        const next = await pipelineApi.getPipeline(id);
+        setPipeline(next);
+        setPipelineState(next.state);
+        setCheckpointId(next.checkpoint?.id ?? null);
+        if (next.state === "RUNNING" && attempts > 1) {
+          pollPipelineUntilSettled(id, attempts - 1);
+        }
+      } catch {
+        // Keep the current UI state if the backend is temporarily unavailable.
+      }
+    }, 2000);
+  }
+
+  async function runCurrentStage(id: string) {
+    const next = await pipelineApi.runPipeline(id);
+    setPipeline(next);
+    setPipelineState(next.state);
+    setCheckpointId(next.checkpoint?.id ?? null);
+    if (next.state === "RUNNING") {
+      pollPipelineUntilSettled(id);
+    }
+    return next;
   }
 
   async function generateDeliveryPlan() {
     if (!activeRequirement) return;
     setIsApiBusy(true);
     try {
-      const pipeline = await pipelineApi.createPipeline({ requirement: activeRequirement });
-      setPipelineId(pipeline.id);
-      setCheckpointId(pipeline.checkpoint?.id ?? null);
+      const created = await pipelineApi.createPipeline({ requirement: activeRequirement });
+      setPipelineId(created.id);
+      const parsed = await pipelineApi.runPipeline(created.id);
+      setPipeline(parsed);
+      setCheckpointId(parsed.checkpoint?.id ?? null);
       setHasPlan(true);
       setHasCreated(false);
       setHasApproved(false);
-      setPipelineState(pipeline.state);
+      setPipelineState(parsed.state);
+      if (parsed.state === "RUNNING") {
+        pollPipelineUntilSettled(created.id);
+      }
     } finally {
       setIsApiBusy(false);
     }
@@ -242,15 +268,20 @@ export default function ConsoleV4EntryCockpit() {
     if (!pipelineId) return;
     setIsApiBusy(true);
     try {
-      const pipeline = await pipelineApi.runPipeline(pipelineId);
-      setCheckpointId(pipeline.checkpoint?.id ?? null);
+      if (checkpointId) {
+        const approved = await pipelineApi.approveCheckpoint(checkpointId);
+        setPipeline(approved);
+        setPipelineState(approved.state);
+        setCheckpointId(approved.checkpoint?.id ?? null);
+        if (approved.state === "RUNNING") {
+          await runCurrentStage(pipelineId);
+        }
+      } else {
+        await runCurrentStage(pipelineId);
+      }
       setHasPlan(true);
       setHasCreated(true);
       setHasApproved(false);
-      setPipelineState(pipeline.state);
-      window.setTimeout(() => {
-        void refreshPipeline(pipelineId);
-      }, 950);
     } finally {
       setIsApiBusy(false);
     }
@@ -261,12 +292,15 @@ export default function ConsoleV4EntryCockpit() {
     setIsApiBusy(true);
     try {
       const pipeline = await pipelineApi.approveCheckpoint(checkpointId);
+      setPipeline(pipeline);
       setHasApproved(true);
       setPipelineState(pipeline.state);
       setCheckpointId(pipeline.checkpoint?.id ?? checkpointId);
-      window.setTimeout(() => {
-        void refreshPipeline(pipelineId);
-      }, 760);
+      if (pipeline.state === "RUNNING") {
+        await runCurrentStage(pipelineId);
+      } else {
+        pollPipelineUntilSettled(pipelineId);
+      }
     } finally {
       setIsApiBusy(false);
     }
@@ -279,6 +313,7 @@ export default function ConsoleV4EntryCockpit() {
       const pipeline = await pipelineApi.rejectCheckpoint(checkpointId, {
         reason: "需要补充接口约束后重新确认计划。",
       });
+      setPipeline(pipeline);
       setCheckpointId(pipeline.checkpoint?.id ?? null);
       setHasCreated(false);
       setHasPlan(true);
@@ -295,6 +330,7 @@ export default function ConsoleV4EntryCockpit() {
     setHasApproved(false);
     setPipelineId(null);
     setCheckpointId(null);
+    setPipeline(null);
     setPipelineState("CREATED");
   }
 
@@ -305,6 +341,7 @@ export default function ConsoleV4EntryCockpit() {
     setHasApproved(false);
     setPipelineId(null);
     setCheckpointId(null);
+    setPipeline(null);
     setPipelineState("CREATED");
   }
 
@@ -367,6 +404,7 @@ export default function ConsoleV4EntryCockpit() {
           <div className="min-h-0 flex-1 overflow-hidden p-4 md:p-5">
             <div className="mx-auto grid h-full max-w-[1480px] min-h-0 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[248px_minmax(0,1fr)] lg:overflow-hidden">
               <ProjectFlowPanel
+                pipeline={pipeline}
                 stage={projectStage}
                 state={pipelineState}
                 hasApproved={hasApproved}
@@ -377,6 +415,7 @@ export default function ConsoleV4EntryCockpit() {
                 lens={activeLens}
                 requirement={requirement}
                 activeRequirement={activeRequirement}
+                pipeline={pipeline}
                 stage={projectStage}
                 state={pipelineState}
                 hasPlan={hasPlan}
@@ -417,17 +456,19 @@ function StateBadge({ state }: { state: PipelineState }) {
 }
 
 function ProjectFlowPanel({
+  pipeline,
   stage,
   state,
   hasApproved,
   onReset,
 }: {
+  pipeline: Pipeline | null;
   stage: ProjectStage;
   state: PipelineState;
   hasApproved: boolean;
   onReset: () => void;
 }) {
-  const currentIndex =
+  const currentIndex: number =
     stage === "empty"
       ? 0
       : stage === "planned"
@@ -440,38 +481,72 @@ function ProjectFlowPanel({
       ? 2
       : 1;
 
-  const flow = [
+  const fallbackFlow: Array<{
+    id: string;
+    name: string;
+    status: StageStatus;
+    meta: { input?: string; output?: string };
+    icon: typeof MessageSquareText;
+  }> = [
     {
-      title: "需求分析",
-      desc: "拆解目标、边界和验收",
+      id: "analysis",
+      name: "需求分析",
+      status: currentIndex > 0 ? "DONE" : currentIndex === 0 ? "RUNNING" : "PENDING",
+      meta: { output: "拆解目标、边界和验收" },
       icon: MessageSquareText,
     },
     {
-      title: "方案设计",
-      desc: "生成架构、接口和变更路径",
+      id: "design",
+      name: "方案设计",
+      status: currentIndex > 1 ? "DONE" : currentIndex === 1 ? "RUNNING" : "PENDING",
+      meta: { output: "生成架构、接口和变更路径" },
       icon: Workflow,
     },
     {
-      title: "编码实现",
-      desc: "输出代码变更和 Diff",
+      id: "coding",
+      name: "编码实现",
+      status: currentIndex > 2 ? "DONE" : currentIndex === 2 ? "RUNNING" : "PENDING",
+      meta: { output: "输出代码变更和 Diff" },
       icon: Code2,
     },
     {
-      title: "测试验证",
-      desc: "生成测试并验证关键路径",
+      id: "testing",
+      name: "测试验证",
+      status: currentIndex > 3 ? "DONE" : currentIndex === 3 ? "RUNNING" : "PENDING",
+      meta: { output: "生成测试并验证关键路径" },
       icon: TestTube2,
     },
     {
-      title: "代码评审",
-      desc: "检查风险、规范和阻塞项",
+      id: "review",
+      name: "代码评审",
+      status: currentIndex > 4 ? "DONE" : currentIndex === 4 ? "RUNNING" : "PENDING",
+      meta: { output: "检查风险、规范和阻塞项" },
       icon: ShieldCheck,
     },
     {
-      title: "交付集成",
-      desc: "汇总交付包和 MR",
+      id: "delivery",
+      name: "交付集成",
+      status: currentIndex > 5 ? "DONE" : currentIndex === 5 ? "RUNNING" : "PENDING",
+      meta: { output: "汇总交付包和 MR" },
       icon: GitMerge,
     },
   ];
+
+  const iconMap: Record<string, typeof MessageSquareText> = {
+    analysis: MessageSquareText,
+    design: Workflow,
+    coding: Code2,
+    testing: TestTube2,
+    review: ShieldCheck,
+    delivery: GitMerge,
+  };
+
+  const flow = pipeline?.stages.length
+    ? pipeline.stages.map((item) => ({
+        ...item,
+        icon: iconMap[item.id] || FileText,
+      }))
+    : fallbackFlow;
 
   return (
     <aside className="flex min-h-[500px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.09] bg-[#11111a]/50 shadow-[0_20px_70px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl lg:min-h-0">
@@ -493,12 +568,12 @@ function ProjectFlowPanel({
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="space-y-2">
           {flow.map((item, index) => {
-            const done = currentIndex > index;
-            const active = currentIndex === index;
+            const done = item.status === "DONE";
+            const active = item.status === "RUNNING" || item.status === "WAITING_APPROVAL";
             const Icon = item.icon;
             return (
               <div
-                key={item.title}
+                key={item.id}
                 className={`rounded-2xl border p-3.5 transition-all duration-300 ${
                   active
                     ? "border-glow-pink/35 bg-gradient-to-br from-weave-500/15 via-glow-violet/10 to-glow-pink/10 shadow-[0_0_28px_rgba(139,92,246,0.14)]"
@@ -524,9 +599,11 @@ function ProjectFlowPanel({
                       <span className="font-mono text-[10px] text-white/30">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <div className="text-[13px] font-semibold">{item.title}</div>
+                      <div className="text-[13px] font-semibold">{item.name}</div>
                     </div>
-                    <p className="mt-1 text-xs leading-relaxed text-white/45">{item.desc}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/45">
+                      {String(item.meta.output || item.meta.input || "等待后端阶段信息")}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -542,6 +619,7 @@ function CurrentStepWorkspace({
   lens,
   requirement,
   activeRequirement,
+  pipeline,
   stage,
   state,
   hasPlan,
@@ -558,6 +636,7 @@ function CurrentStepWorkspace({
   lens: RoleLens;
   requirement: string;
   activeRequirement: string;
+  pipeline: Pipeline | null;
   stage: ProjectStage;
   state: PipelineState;
   hasPlan: boolean;
@@ -680,10 +759,12 @@ function CurrentStepWorkspace({
 
         {stage === "planned" && (
           <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
-            <RequirementBrief requirement={activeRequirement} resolved />
+            <RequirementBrief requirement={activeRequirement} pipeline={pipeline} resolved />
             <PlanPreview
               lens={lens}
               requirement={activeRequirement}
+              stages={pipeline?.stages}
+              pipeline={pipeline}
               onRevise={onRevisePlan}
               onConfirm={onConfirmPlan}
               isBusy={isApiBusy}
@@ -693,10 +774,11 @@ function CurrentStepWorkspace({
 
         {stage === "running" && (
           <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
-            <RequirementBrief requirement={activeRequirement} resolved />
+            <RequirementBrief requirement={activeRequirement} pipeline={pipeline} resolved />
             <PipelinePreview
               requirement={activeRequirement}
               state={state}
+              pipeline={pipeline}
               lens={lens}
               onApprove={onApprove}
               onReject={onReject}
@@ -782,17 +864,35 @@ function ContextActions() {
 
 function RequirementBrief({
   requirement,
+  pipeline,
   resolved,
 }: {
   requirement: string;
+  pipeline: Pipeline | null;
   resolved: boolean;
 }) {
+  const parsed = pipeline?.context?.requirement_structured as
+    | {
+        goal?: unknown;
+        users?: unknown;
+        user?: unknown;
+        features?: unknown;
+        constraints?: unknown;
+        acceptance_criteria?: unknown;
+      }
+    | undefined;
+  const toBrief = (value: unknown, fallback = "等待 AI 解析") => {
+    if (Array.isArray(value)) return value.map(String).filter(Boolean).slice(0, 2).join("、") || fallback;
+    if (typeof value === "string" && value.trim()) return value.trim();
+    return fallback;
+  };
   const briefItems = [
-    { label: "目标", value: "上线博客评论能力" },
-    { label: "用户", value: "登录用户 / 管理员" },
-    { label: "约束", value: "审核、敏感词拦截、生成 MR" },
-    { label: "验收", value: "可评论、可审核、违规内容被拦截" },
+    { label: "目标", value: toBrief(parsed?.goal) },
+    { label: "功能", value: toBrief(parsed?.features) },
+    { label: "约束", value: toBrief(parsed?.constraints) },
+    { label: "验收", value: toBrief(parsed?.acceptance_criteria) },
   ];
+  const hasParsedRequirement = Boolean(parsed);
 
   return (
     <div className="mb-4 rounded-2xl border border-white/[0.10] bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
@@ -819,7 +919,7 @@ function RequirementBrief({
               : "border-white/[0.10] bg-white/[0.035] text-white/35"
           }`}
         >
-          {resolved ? "PARSED" : "WAITING"}
+          {hasParsedRequirement ? "PARSED" : "WAITING"}
         </span>
       </div>
 
@@ -828,14 +928,14 @@ function RequirementBrief({
           <div
             key={item.label}
             className={`rounded-xl border px-3 py-2 ${
-              resolved
+              hasParsedRequirement
                 ? "border-white/[0.10] bg-black/25"
                 : "border-white/[0.06] bg-black/10 opacity-55"
             }`}
           >
             <div className="text-[10px] font-medium text-white/35">{item.label}</div>
             <div className="mt-1 text-xs leading-relaxed text-white/70">
-              {resolved ? item.value : "等待 AI 解析"}
+              {hasParsedRequirement ? item.value : "等待 AI 解析"}
             </div>
           </div>
         ))}
@@ -847,16 +947,32 @@ function RequirementBrief({
 function PlanPreview({
   lens,
   requirement,
+  stages,
+  pipeline,
   onRevise,
   onConfirm,
   isBusy,
 }: {
   lens: RoleLens;
   requirement: string;
+  stages?: PipelineStage[];
+  pipeline: Pipeline | null;
   onRevise: () => void;
   onConfirm: () => Promise<void>;
   isBusy: boolean;
 }) {
+  const planStages: Array<Pick<PipelineStage, "id" | "name" | "meta">> =
+    stages && stages.length
+      ? stages
+      : [
+          { id: "analysis", name: "需求分析", meta: { output: lens.outputHint } },
+          { id: "design", name: "方案设计", meta: { output: "输出技术方案、接口思路、文件变更路径和风险点。" } },
+          { id: "coding", name: "编码实现", meta: { output: "根据方案生成代码变更集，并保留可审阅 Diff。" } },
+          { id: "testing", name: "测试验证", meta: { output: "生成测试策略、边界用例和关键路径验证结果。" } },
+          { id: "review", name: "代码评审", meta: { output: "检查正确性、安全性、规范性和发布阻塞项。" } },
+          { id: "delivery", name: "交付集成", meta: { output: "汇总需求文档、方案、测试摘要和可合并 MR。" } },
+        ];
+
   return (
     <div className="min-h-[360px]">
       <div className="rounded-xl border border-white/[0.10] bg-white/[0.04] p-4">
@@ -865,27 +981,26 @@ function PlanPreview({
       </div>
 
       <div className="mt-5 space-y-3">
-        {[
-          ["01", "需求分析", lens.outputHint],
-          ["02", "方案设计", "输出技术方案、接口思路、文件变更路径和风险点。"],
-          ["03", "编码实现", "根据方案生成代码变更集，并保留可审阅 Diff。"],
-          ["04", "测试验证", "生成测试策略、边界用例和关键路径验证结果。"],
-          ["05", "代码评审", "检查正确性、安全性、规范性和发布阻塞项。"],
-          ["06", "交付集成", "汇总需求文档、方案、测试摘要和可合并 MR。"],
-        ].map(([index, title, desc]) => (
+        {planStages.map((item, index) => (
           <div
-            key={title}
+            key={item.id}
             className="rounded-xl border border-white/[0.10] bg-white/[0.035] p-4"
           >
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[11px] text-white/35">{index}</span>
+              <span className="font-mono text-[11px] text-white/35">
+                {String(index + 1).padStart(2, "0")}
+              </span>
               <CheckCircle2 className="h-4 w-4 text-glow-pink" />
             </div>
-            <div className="mt-3 text-sm font-semibold">{title}</div>
-            <p className="mt-1 text-xs leading-relaxed text-white/45">{desc}</p>
+            <div className="mt-3 text-sm font-semibold">{item.name}</div>
+            <p className="mt-1 text-xs leading-relaxed text-white/45">
+              {String(item.meta.output || item.meta.input || "等待后端阶段说明")}
+            </p>
           </div>
         ))}
       </div>
+
+      <BackendStatusPanel pipeline={pipeline} />
 
       <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/18 p-4">
         <div className="text-xs font-semibold text-white/75">这一步由你决定</div>
@@ -955,6 +1070,7 @@ function RoleLensSwitcher({
 function PipelinePreview({
   requirement,
   state,
+  pipeline,
   lens,
   onApprove,
   onReject,
@@ -962,14 +1078,24 @@ function PipelinePreview({
 }: {
   requirement: string;
   state: PipelineState;
+  pipeline: Pipeline | null;
   lens: RoleLens;
   onApprove: () => Promise<void>;
   onReject: () => Promise<void>;
   isBusy: boolean;
 }) {
   if (state === "FINISHED") {
-    return <DeliveryPackage requirement={requirement} lens={lens} />;
+    return <DeliveryPackage requirement={requirement} lens={lens} pipeline={pipeline} />;
   }
+
+  const currentStage = pipeline?.currentStage;
+  const checkpoint = pipeline?.checkpoint;
+  const stageName = checkpoint?.stageName || currentStage?.name || "方案设计";
+  const nextStage = checkpoint?.stageIndex !== undefined ? pipeline?.stages[checkpoint.stageIndex + 1] : undefined;
+  const waitingTitle = `${stageName}等待人工审批`;
+  const runningTitle = `${stageName} Agent 正在执行`;
+  const context = pipeline?.context || {};
+  const artifactPreview = getStageArtifactPreview(stageName, context);
 
   return (
     <div>
@@ -992,29 +1118,50 @@ function PipelinePreview({
           ) : (
             <Loader2 className="h-4 w-4 animate-spin text-weave-300" />
           )}
-          {state === "WAITING_APPROVAL" ? "方案设计等待人工审批" : "方案设计 Agent 正在生成方案"}
+          {state === "WAITING_APPROVAL" ? waitingTitle : runningTitle}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-white/45">
           {state === "WAITING_APPROVAL"
-            ? "当前节点已产出技术方案。请在下方做 Approve / Reject 决策。"
-            : "AI 正在基于需求上下文生成方案、影响范围和下一步代码生成输入。"}
+            ? `当前节点已产出「${stageName}」阶段结果。通过后将进入「${nextStage?.name || "下一阶段"}」。`
+            : `AI 正在处理「${stageName}」阶段，完成后会生成 checkpoint 等待你审批。`}
         </p>
       </div>
+
+      <StageOutputPanel
+        stageName={stageName}
+        currentStage={currentStage}
+        artifactPreview={artifactPreview}
+        isDemoMode={Boolean(context.demo_mode)}
+        isWaitingApproval={state === "WAITING_APPROVAL"}
+      />
+
+      <BackendStatusPanel pipeline={pipeline} />
 
       <div className="mt-5 overflow-hidden rounded-xl border border-white/[0.10] bg-black/45">
         <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2.5">
           <span className="text-xs font-medium text-white/70">Agent Log</span>
           <span className="text-[11px] font-mono text-white/30">
-            GET /pipelines/PIP-2046
+            GET /pipelines/{pipeline?.id || "pending"}
           </span>
         </div>
         <div className="p-4 font-mono text-[12px] leading-6">
-          <p className="text-emerald-300">✓ requirement.normalized</p>
-          <p className="text-emerald-300">✓ stories.generated: 3</p>
-          <p className="text-weave-300">→ architecture.drafting...</p>
-          {state === "WAITING_APPROVAL" && (
-            <p className="text-amber-300">◆ checkpoint.required: architecture_v1</p>
-          )}
+          {(pipeline?.logs.length ? pipeline.logs : [
+            { id: "fallback-1", level: "SUCCESS" as const, message: "requirement.normalized" },
+            { id: "fallback-2", level: "INFO" as const, message: "stage.running" },
+          ]).map((log) => (
+            <p
+              key={log.id}
+              className={
+                log.level === "SUCCESS"
+                  ? "text-emerald-300"
+                  : log.level === "WAITING"
+                  ? "text-amber-300"
+                  : "text-weave-300"
+              }
+            >
+              {log.level === "SUCCESS" ? "✓" : log.level === "WAITING" ? "◆" : "→"} {log.message}
+            </p>
+          ))}
         </div>
       </div>
 
@@ -1022,10 +1169,10 @@ function PipelinePreview({
         <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
             <ShieldCheck className="h-4 w-4" />
-            {lens.checkpoint.title}
+            {checkpoint?.title || lens.checkpoint.title}
           </div>
           <p className="mt-2 text-xs leading-relaxed text-amber-100/60">
-            {lens.checkpoint.summary}
+            {checkpoint?.summary || lens.checkpoint.summary}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -1054,13 +1201,220 @@ function PipelinePreview({
   );
 }
 
+function getStageArtifactPreview(stageName: string, context: Record<string, unknown>) {
+  const entries: Array<[string, unknown]> = [
+    ["需求分析", context.analysis_doc || context.requirement_structured],
+    ["方案设计", context.design_doc],
+    ["编码实现", context.code_diff],
+    ["测试验证", context.test_report],
+    ["代码评审", context.review_result],
+    ["交付集成", context.delivery],
+  ];
+
+  const match = entries.find(([name]) => stageName.includes(name));
+  return match?.[1];
+}
+
+function formatArtifactPreview(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 2);
+  }
+  return String(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function asString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function getNestedString(source: Record<string, unknown>, keys: string[]) {
+  let current: unknown = source;
+  for (const key of keys) {
+    current = asRecord(current)[key];
+  }
+  return asString(current);
+}
+
+function BackendStatusPanel({ pipeline }: { pipeline: Pipeline | null }) {
+  if (!pipeline) return null;
+
+  const context = pipeline.context || {};
+  const delivery = asRecord(context.delivery);
+  const workspace = asRecord(context.workspace);
+  const testReport = asRecord(context.test_report);
+  const workspaceReport = asRecord(context.workspace_test_report);
+  const workspaceDir = asString(context.workspace_dir) || asString(delivery.workspace_dir) || asString(workspace.root);
+  const entryFile = asString(context.entry_file) || asString(delivery.entry_file) || asString(workspace.entry_file);
+  const artifactDir = asString(context.artifact_dir);
+  const lastError = asString(context.last_error);
+  const testPassed =
+    typeof testReport.passed === "boolean"
+      ? testReport.passed
+      : typeof workspaceReport.passed === "boolean"
+      ? workspaceReport.passed
+      : typeof delivery.test_passed === "boolean"
+      ? delivery.test_passed
+      : undefined;
+  const deliveryStatus = asString(delivery.status);
+  const stageArtifact = pipeline.currentStage?.id
+    ? getNestedString(context, ["stage_artifacts", pipeline.currentStage.id, "stage_file"])
+    : "";
+
+  const rows = [
+    { label: "Pipeline", value: pipeline.id },
+    { label: "后端状态", value: `${pipeline.state} / ${pipeline.currentStage?.id || "none"}` },
+    { label: "当前阶段产物", value: stageArtifact },
+    { label: "产物目录", value: artifactDir },
+    { label: "Workspace", value: workspaceDir },
+    { label: "入口文件", value: entryFile },
+    { label: "测试结果", value: testPassed === undefined ? "" : testPassed ? "passed" : "failed" },
+    { label: "交付状态", value: deliveryStatus },
+  ].filter((row) => row.value);
+
+  return (
+    <div className="mt-5 rounded-xl border border-white/[0.10] bg-black/28 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-white/35">
+            Backend State
+          </div>
+          <h4 className="mt-1 text-sm font-semibold">后端真实进度与本地产物</h4>
+        </div>
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-mono text-white/40">
+          LIVE
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        {rows.map((row) => (
+          <div key={row.label} className="grid gap-2 rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-2 md:grid-cols-[88px_minmax(0,1fr)]">
+            <div className="text-[10px] font-medium text-white/35">{row.label}</div>
+            <div className="break-all font-mono text-[11px] leading-5 text-white/62">{row.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {lastError && (
+        <div className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2">
+          <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-red-200/70">last_error</div>
+          <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-red-100/75">
+            {lastError}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StageOutputPanel({
+  stageName,
+  currentStage,
+  artifactPreview,
+  isDemoMode,
+  isWaitingApproval,
+}: {
+  stageName: string;
+  currentStage?: PipelineStage;
+  artifactPreview: unknown;
+  isDemoMode: boolean;
+  isWaitingApproval: boolean;
+}) {
+  const preview = formatArtifactPreview(artifactPreview);
+  const acceptance = currentStage?.meta.acceptance || [];
+
+  return (
+    <div className="mt-5 rounded-xl border border-white/[0.10] bg-white/[0.03] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-white/35">
+            Stage Output
+          </div>
+          <h4 className="mt-1 text-sm font-semibold">
+            {isWaitingApproval ? `${stageName}产物预览` : `${stageName}正在生成`}
+          </h4>
+        </div>
+        <span className="rounded-full border border-white/[0.08] bg-black/20 px-2 py-1 text-[10px] font-mono text-white/35">
+          {isDemoMode ? "DEMO MODE" : isWaitingApproval ? "READY" : "GENERATING"}
+        </span>
+      </div>
+
+      {isDemoMode && (
+        <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-100/65">
+          当前后端运行在 demo_mode：会返回模拟 Agent 产物，用于验证真实 Pipeline 流程；不是实际调用大模型 API。
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.07] bg-black/20 p-3">
+          <div className="text-[10px] font-medium text-white/35">输入</div>
+          <p className="mt-1 text-xs leading-relaxed text-white/60">
+            {String(currentStage?.meta.input || "后端正在准备当前阶段输入")}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-black/20 p-3">
+          <div className="text-[10px] font-medium text-white/35">预期输出</div>
+          <p className="mt-1 text-xs leading-relaxed text-white/60">
+            {String(currentStage?.meta.output || "完成后会在这里显示阶段产物摘要")}
+          </p>
+        </div>
+      </div>
+
+      {acceptance.length > 0 && (
+        <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
+          <div className="text-[10px] font-medium text-white/35">验收点</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {acceptance.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2 py-1 text-[11px] text-white/50"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/30 p-3">
+        <div className="text-[10px] font-medium text-white/35">后端产物</div>
+        {preview ? (
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-white/58">
+            {preview}
+          </pre>
+        ) : (
+          <p className="mt-2 text-xs leading-relaxed text-white/42">
+            当前阶段还在执行，后端返回产物后会自动出现在这里。
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DeliveryPackage({
   requirement,
   lens,
+  pipeline,
 }: {
   requirement: string;
   lens: RoleLens;
+  pipeline: Pipeline | null;
 }) {
+  const context = pipeline?.context || {};
+  const delivery = asRecord(context.delivery);
+  const workspaceDir = asString(context.workspace_dir) || asString(delivery.workspace_dir);
+  const entryFile = asString(context.entry_file) || asString(delivery.entry_file);
+  const testPassed =
+    typeof delivery.test_passed === "boolean"
+      ? delivery.test_passed
+      : typeof asRecord(context.test_report).passed === "boolean"
+      ? (asRecord(context.test_report).passed as boolean)
+      : undefined;
   const artifacts = [
     {
       title: "需求文档",
@@ -1084,8 +1438,8 @@ function DeliveryPackage({
       icon: CheckCircle2,
     },
     {
-      title: "Merge Request",
-      desc: "MR #2046 已准备，可进入代码审阅",
+      title: "本地项目",
+      desc: entryFile || "等待后端返回 entry_file",
       icon: GitMerge,
     },
   ];
@@ -1128,10 +1482,16 @@ function DeliveryPackage({
         ))}
       </div>
 
-      <button className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-ink-950 transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
-        打开 MR
-        <ArrowRight className="h-3.5 w-3.5" />
-      </button>
+      <BackendStatusPanel pipeline={pipeline} />
+
+      <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/25 p-4">
+        <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-white/35">Final Output</div>
+        <div className="mt-3 space-y-2 text-xs leading-relaxed text-white/58">
+          <p>测试：{testPassed === undefined ? "未知" : testPassed ? "通过" : "失败"}</p>
+          <p className="break-all">项目目录：{workspaceDir || "等待后端返回 workspace_dir"}</p>
+          <p className="break-all">入口文件：{entryFile || "等待后端返回 entry_file"}</p>
+        </div>
+      </div>
     </div>
   );
 }

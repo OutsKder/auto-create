@@ -232,6 +232,38 @@ export default function DraftGallery() {
               </div>
             </Link>
             <Link
+              to="/drafts/console/v5"
+              className="group card-feishu p-5 relative overflow-hidden block ring-1 ring-emerald-400/40 shadow-glow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-400 via-weave-500 to-glow-violet" />
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium tracking-wider uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                <Sparkles className="h-2.5 w-2.5" />
+                新验证
+              </div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs font-medium text-ink-500 mb-1.5">
+                    方案 E · 用户引导驾驶舱
+                  </div>
+                  <div className="text-base font-semibold text-ink-900">
+                    v5 · Guided Cockpit
+                  </div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-ink-400 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink-900" />
+              </div>
+              <p className="mt-3 text-sm text-ink-600 leading-relaxed">
+                把 AI 进度、阶段摘要和下一步动作放在主路径；后端路径与原始错误默认折叠进开发者详情。
+              </p>
+              <div className="mt-5 flex items-center gap-3 text-[11px] text-ink-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  UX 验证
+                </span>
+                <span className="text-ink-300">·</span>
+                <span>Day 3 · 13:59</span>
+              </div>
+            </Link>
+            <Link
               to="/drafts/console/v4"
               className="group card-feishu p-5 relative overflow-hidden block ring-1 ring-glow-pink/30 shadow-glow-sm"
             >

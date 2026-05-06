@@ -4,7 +4,7 @@
 
 前端已经预留统一 API client：`formal-create/main-site/src/api/pipelineApi.ts`。
 
-当前它使用 mock 实现，让 Console 可以先完整体验；后续接真实后端时，只需要替换这个文件中的实现，页面组件不需要重写。
+当前它已经支持真实后端 adapter + mock 兜底。设置 `VITE_PIPELINE_API_BASE_URL` 后会请求后端；不设置时继续使用前端 mock，方便离线预览。
 
 ## 后端共识接口
 
@@ -37,14 +37,30 @@ CREATED -> RUNNING -> WAITING_APPROVAL -> FINISHED
 
 ```ts
 type PipelineState = "CREATED" | "RUNNING" | "WAITING_APPROVAL" | "FINISHED";
+type StageStatus = "PENDING" | "RUNNING" | "DONE" | "WAITING_APPROVAL";
+
+type PipelineStage = {
+  id: string;
+  name: string;
+  status: StageStatus;
+  meta: {
+    input?: string;
+    output?: string;
+    acceptance?: string[];
+  };
+};
 
 type Pipeline = {
   id: string;
   requirement: string;
   state: PipelineState;
+  currentStageIndex: number;
+  currentStage?: PipelineStage;
+  stages: PipelineStage[];
   checkpoint?: PipelineCheckpoint;
   artifacts: PipelineArtifact[];
   logs: PipelineLog[];
+  context?: Record<string, unknown>;
 };
 
 type PipelineCheckpoint = {
@@ -52,6 +68,9 @@ type PipelineCheckpoint = {
   title: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  stageId?: string;
+  stageName?: string;
+  stageIndex?: number;
 };
 
 type PipelineArtifact = {
@@ -68,14 +87,55 @@ type PipelineLog = {
 };
 ```
 
+## 当前真实后端接入
+
+当前已接入后端目录：
+
+```text
+auto-create-target-projects-update/backend/api_first
+```
+
+本地 demo server：
+
+```bash
+cd auto-create-target-projects-update
+conda run -n byte python -m backend.api_first.http_demo_server
+```
+
+默认地址：
+
+```text
+http://127.0.0.1:8008
+```
+
+前端环境变量（推荐通过 Vite proxy，避免浏览器 CORS/preflight 问题）：
+
+```text
+VITE_PIPELINE_API_BASE_URL=/api-pipeline
+```
+
+`formal-create/main-site/vite.config.ts` 会把 `/api-pipeline/*` 转发到 `http://127.0.0.1:8008/*`。
+
+真实后端返回字段映射：
+
+| 后端字段 | 前端字段 | 说明 |
+| --- | --- | --- |
+| `status` | `state` | 整条 Pipeline 状态 |
+| `current_stage_index` | `currentStageIndex` | 当前阶段下标 |
+| `current_stage` | `currentStage` | 当前后端阶段 |
+| `stages` | `stages` | 六阶段真实状态，驱动 Console 左侧流程 |
+| `checkpoint.stage_*` | `checkpoint.stage*` | 具体审批点所属阶段 |
+| `context.requirement_raw` | `requirement` | 原始用户需求 |
+| `context` | `context` / `artifacts` | 阶段产物来源，前端会映射为交付物摘要 |
+
 ## 当前 mock 行为
 
-当前 `pipelineApi.ts` 的行为如下：
+不设置 `VITE_PIPELINE_API_BASE_URL` 时，`pipelineApi.ts` 使用 mock：
 
 1. `createPipeline`
    - 返回固定示例 `PIP-2046`
    - 状态为 `CREATED`
-   - 用于模拟“交付计划已生成”
+   - 生成六阶段 `stages`
 
 2. `runPipeline`
    - 状态进入 `RUNNING`
@@ -96,27 +156,35 @@ type PipelineLog = {
 
 ## 后端建议返回字段
 
-后端真实接口建议至少返回：
+后端真实接口当前至少返回：
 
 ```json
 {
-  "id": "PIP-2046",
-  "requirement": "给博客增加评论功能...",
-  "state": "WAITING_APPROVAL",
-  "checkpoint": {
-    "id": "CHK-ARCH-001",
-    "title": "架构方案等待审批",
-    "summary": "请确认评论 API、审核状态和敏感词过滤策略是否符合交付目标。",
-    "status": "PENDING"
-  },
-  "artifacts": [],
-  "logs": [
-    {
-      "id": "LOG-001",
-      "level": "SUCCESS",
-      "message": "requirement.normalized"
+  "id": "pipeline-id",
+  "status": "WAITING_APPROVAL",
+  "current_stage_index": 1,
+  "current_stage": {
+    "id": "design",
+    "name": "方案设计",
+    "status": "DONE",
+    "meta": {
+      "input": "结构化需求 + 代码库上下文",
+      "output": "技术方案（含文件变更清单、API 设计）",
+      "acceptance": []
     }
-  ]
+  },
+  "stages": [],
+  "checkpoint": {
+    "id": "checkpoint-id",
+    "stage_id": "design",
+    "stage_name": "方案设计",
+    "stage_index": 1,
+    "status": "PENDING",
+    "note": ""
+  },
+  "context": {
+    "requirement_raw": "给博客增加评论功能..."
+  }
 }
 ```
 
@@ -128,7 +196,7 @@ type PipelineLog = {
 formal-create/main-site/src/api/pipelineApi.ts
 ```
 
-后续接真实后端时，优先替换这个文件中的 mock 方法为 `fetch` 请求：
+当前接入链路：
 
 ```text
 Console UI -> pipelineApi.ts -> 后端 REST API

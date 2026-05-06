@@ -4,6 +4,7 @@ import ConsoleV2Geek from "./drafts/console/v2_geek_glow/ConsoleV2Geek";
 import ConsoleV2OptionBBackup from "./drafts/console/v2_option_b_backup/ConsoleV2OptionBBackup";
 import ConsoleV3CalmCockpit from "./drafts/console/v3_calm_cockpit/ConsoleV3CalmCockpit";
 import ConsoleV4EntryCockpit from "./drafts/console/v4_entry_cockpit/ConsoleV4EntryCockpit";
+import ConsoleV5GuidedCockpit from "./drafts/console/v5_guided_cockpit/ConsoleV5GuidedCockpit";
 import LandingV1Feishu from "./drafts/landing/v1_feishu_clean/LandingV1Feishu";
 import LandingV2Geek from "./drafts/landing/v2_geek_glow/LandingV2Geek";
 import LandingV3Hybrid from "./drafts/landing/v3_hybrid/LandingV3Hybrid";
@@ -64,6 +65,10 @@ export const router = createBrowserRouter([
   {
     path: "/drafts/console/v4",
     element: <ConsoleV4EntryCockpit />,
+  },
+  {
+    path: "/drafts/console/v5",
+    element: <ConsoleV5GuidedCockpit />,
   },
   {
     path: "/drafts/onboarding/v2",
