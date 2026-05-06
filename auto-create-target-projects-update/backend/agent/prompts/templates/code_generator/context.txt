@@ -1,0 +1,26 @@
+需求：
+{{requirement_structured}}
+
+设计方案：
+{{design}}
+
+代码库上下文：
+{{codebase_context}}
+
+文件变更计划：
+{{file_change_plan}}
+请基于以下输入生成结构化代码变更：
+
+## 结构化需求
+{{requirement_structured}}
+
+## 技术方案
+{{design}}
+
+## 代码库上下文
+{{codebase_context}}
+
+## 文件变更计划
+{{file_change_plan}}
+
+请严格围绕文件变更计划输出补丁，不要修改未列出的文件。

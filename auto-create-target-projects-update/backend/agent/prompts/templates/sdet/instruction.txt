@@ -1,0 +1,27 @@
+请输出一个严格的 JSON 对象，结构如下：
+{
+  "stage": "testing",
+  "test_plan": [
+    {
+      "acceptance_criterion": "...",
+      "test_type": "unit|integration|e2e",
+      "coverage_target": ["..."]
+    }
+  ],
+  "test_files": [
+    {
+      "file_path": "...",
+      "test_type": "unit|integration|e2e",
+      "covers": ["..."]
+    }
+  ],
+  "test_code": "...",
+  "runner_commands": ["pytest -q"],
+  "sandbox_result": null
+}
+
+要求：
+- test_plan 要从验收标准中直接映射出来。
+- test_code 可以先是字符串形式的测试代码草案。
+- runner_commands 要尽量具体，避免泛化命令。
+- sandbox_result 在未执行时可先置空结构，但字段不能省略。

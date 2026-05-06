@@ -1,0 +1,33 @@
+# Core Agent Framework Dependencies
+pydantic>=2.0,<3.0
+pydantic-core>=2.0
+PyYAML>=6.0
+
+# LLM Integration & LangChain
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-openai>=0.0.5
+langchain-community>=0.0.5
+
+# HTTP & API
+httpx>=0.24.0
+requests>=2.31.0
+
+# Utilities
+python-dotenv>=1.0.0
+python-dateutil>=2.8.2
+click>=8.0.0
+
+# Testing
+pytest>=7.0
+pytest-cov>=4.0
+pytest-asyncio>=0.21.0
+
+# Logging & Monitoring
+loguru>=0.7.0
+
+# Optional: Vector Semantic Retrieval (uncomment if needed)
+# numpy>=1.24.0
+# sentence-transformers>=2.2.2
+# faiss-cpu>=1.7.4
+# scikit-learn>=1.3.2

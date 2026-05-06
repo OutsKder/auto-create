@@ -1,0 +1,57 @@
+请生成 stage="coding" 的 Diff Bundle JSON，结构必须完全符合：
+
+{
+  "stage": "coding",
+  "mode": "diff_bundle",
+  "files_changed": ["/index.html"],
+  "patches": [
+    {
+      "file_path": "/index.html",
+      "change_type": "create",
+      "patch_format": "full_content",
+      "patch": "这里必须是完整 index.html 文件内容，包含 <!DOCTYPE html>、html、head、meta charset、style、body",
+      "reason": "说明为什么创建该文件",
+      "risk_level": "low"
+    }
+  ],
+  "diff": "",
+  "validation": {
+    "static_checks": [],
+    "runtime_checks": []
+  }
+}
+
+生成要求：
+- patch 字段必须包含完整文件源码，不能是摘要、说明、注释占位或 fallback。
+- 网页必须美观，使用背景层次、排版、光影、响应式字号和精致留白。
+- 如果需求里要求展示某段文字，必须让该文字作为页面主体可见内容出现。
+- 所有换行必须作为 JSON 字符串中的 \n 转义，保证整个回答可以被 json.loads 直接解析。
+- 不要输出 JSON 之外的任何字符。
+请输出一个严格的 JSON 对象，结构如下：
+{
+  "stage": "coding",
+  "mode": "diff_bundle",
+  "files_changed": ["..."],
+  "patches": [
+    {
+      "file_path": "...",
+      "change_type": "create|modify|delete",
+      "patch_format": "search_replace|full_content",
+      "patch": "...",
+      "reason": "...",
+      "risk_level": "low|medium|high"
+    }
+  ],
+  "diff": "...",
+  "validation": {
+    "static_checks": ["syntax", "format", "targeted_lint"],
+    "runtime_checks": []
+  }
+}
+
+要求：
+- 如果某个文件是删除动作，patch 可为空字符串，但仍需说明原因。
+- 如果某个文件是新增动作，patch_format 必须为 full_content，patch 中必须给出目标文件的完整内容。
+- 如果某个文件是修改动作，patch_format 必须为 search_replace，patch 中必须使用 SEARCH/REPLACE 协议。
+- diff 字段可给出 git diff 风格文本，也可以在首次实现阶段留空字符串，但不能省略字段。
+- 保持内容最小化、精确化，避免顺手重构。
