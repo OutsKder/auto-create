@@ -51,6 +51,17 @@ export type Pipeline = {
 
 export type CreatePipelineInput = {
   requirement: string;
+  context?: Record<string, unknown>;
+};
+
+export type ImportedProject = {
+  project_key: string;
+  import_id: string;
+  filename: string;
+  repo_path: string;
+  zip_file?: string;
+  file_count: number;
+  sample_files: string[];
 };
 
 export type RejectCheckpointInput = {
@@ -82,7 +93,7 @@ type BackendCheckpoint = {
 
 type BackendPipeline = {
   id: string;
-  status: PipelineState;
+  status?: PipelineState | string;
   current_stage_index?: number;
   current_stage?: BackendStage | null;
   stages?: BackendStage[];
@@ -144,6 +155,17 @@ async function requestBackend<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return window.btoa(binary);
 }
 
 function defaultStages(): PipelineStage[] {
@@ -263,6 +285,21 @@ function logsFromStages(stages: PipelineStage[], checkpoint?: PipelineCheckpoint
   return logs;
 }
 
+function coercePipelineState(data: BackendPipeline): PipelineState {
+  const raw = data.status;
+  const s = typeof raw === "string" ? raw.trim().toUpperCase() : raw;
+  if (s === "CREATED" || s === "RUNNING" || s === "WAITING_APPROVAL" || s === "FINISHED") {
+    return s;
+  }
+  if (data.checkpoint?.status === "PENDING") {
+    return "WAITING_APPROVAL";
+  }
+  const stages = data.stages || [];
+  const anyRunning = stages.some((st) => st.status === "RUNNING");
+  if (anyRunning) return "RUNNING";
+  return "CREATED";
+}
+
 function normalizeBackendPipeline(data: BackendPipeline): Pipeline {
   const stages = (data.stages?.length ? data.stages : defaultStages()).map((stage) => ({
     id: stage.id,
@@ -286,11 +323,12 @@ function normalizeBackendPipeline(data: BackendPipeline): Pipeline {
     : undefined;
 
   const requirement = String(data.context?.requirement_raw || "");
+  const state = coercePipelineState(data);
 
   return {
     id: data.id,
     requirement,
-    state: data.status,
+    state,
     currentStageIndex: data.current_stage_index ?? 0,
     currentStage: data.current_stage
       ? {
@@ -302,7 +340,7 @@ function normalizeBackendPipeline(data: BackendPipeline): Pipeline {
       : undefined,
     stages,
     checkpoint,
-    artifacts: data.status === "FINISHED" ? buildArtifacts(data.context) : [],
+    artifacts: state === "FINISHED" ? buildArtifacts(data.context) : [],
     logs: logsFromStages(stages, checkpoint),
     context: data.context,
   };
@@ -374,7 +412,10 @@ export const pipelineApi = {
         body: JSON.stringify({
           requirement_raw: input.requirement,
           demo_mode: BACKEND_DEMO_MODE,
-          context: BACKEND_DEMO_MODE ? { demo_mode: true } : {},
+          context: {
+            ...(BACKEND_DEMO_MODE ? { demo_mode: true } : {}),
+            ...(input.context || {}),
+          },
         }),
       });
       return normalizeBackendPipeline(data);
@@ -391,9 +432,36 @@ export const pipelineApi = {
       stages,
       artifacts: [],
       logs: [],
-      context: { requirement_raw: input.requirement },
+      context: { requirement_raw: input.requirement, ...(input.context || {}) },
     };
     return normalizeMockPipeline(mockPipeline);
+  },
+
+  async importProjectZip(file: File): Promise<ImportedProject> {
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      throw new Error("请上传 .zip 格式的项目压缩包。");
+    }
+
+    if (hasBackend()) {
+      const contentBase64 = arrayBufferToBase64(await file.arrayBuffer());
+      return requestBackend<ImportedProject>("/projects/import", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name,
+          content_base64: contentBase64,
+        }),
+      });
+    }
+
+    await wait(260);
+    return {
+      project_key: file.name.replace(/\.zip$/i, "") || "uploaded-project",
+      import_id: "mock-import",
+      filename: file.name,
+      repo_path: `mock://imports/${file.name}`,
+      file_count: 0,
+      sample_files: [],
+    };
   },
 
   async runPipeline(pipelineId: string): Promise<Pipeline> {

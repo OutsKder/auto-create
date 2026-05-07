@@ -1,0 +1,22 @@
+{
+  "dir": "workspace",
+  "dir_name": "workspace",
+  "purpose": "Folder centered on title tag",
+  "key_files": [
+    "workspace/index.html"
+  ],
+  "exports": [],
+  "depends_on": [],
+  "keywords": [
+    "HTML",
+    "CSS animation",
+    "gradient background",
+    "text gradient",
+    "responsive text",
+    "single page web",
+    "university display"
+  ],
+  "file_count": 1,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-06T14:07:37.669427+00:00"
+}

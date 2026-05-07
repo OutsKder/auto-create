@@ -143,9 +143,8 @@ export default function LandingV5SequenceStory() {
       />
 
       <div className="relative">
-        <DraftBar isNight={isNight} />
         <header
-          className={`sticky top-10 z-20 border-b backdrop-blur-2xl transition-colors duration-500 ${
+          className={`sticky top-0 z-20 border-b backdrop-blur-2xl transition-colors duration-500 ${
             isNight
               ? "border-white/[0.08] bg-[#0d0d16]/65"
               : "border-ink-200 bg-white/80 shadow-feishu-card"
@@ -237,14 +236,14 @@ export default function LandingV5SequenceStory() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  to="/drafts/console/v2-option-b"
+                  to="/drafts/login/v2"
                   className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                     isNight
                       ? "border-white/[0.10] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white focus-visible:ring-white/20"
                       : "border-ink-200 bg-white text-ink-700 hover:border-ink-300 hover:bg-ink-50 focus-visible:ring-ink-300"
                   }`}
                 >
-                  查看 Console 草稿
+                  体验审批工作台
                 </Link>
               </div>
 
@@ -279,31 +278,6 @@ export default function LandingV5SequenceStory() {
           <RoleSection isNight={isNight} />
           <FinalCta isNight={isNight} />
         </main>
-      </div>
-    </div>
-  );
-}
-
-function DraftBar({ isNight }: { isNight: boolean }) {
-  return (
-    <div
-      className={`relative z-30 border-b backdrop-blur-xl ${
-        isNight ? "border-white/[0.06] bg-black/30" : "border-ink-200 bg-white/70"
-      }`}
-    >
-      <div className="mx-auto flex h-10 max-w-7xl items-center justify-between px-6">
-        <Link
-          to="/"
-          className={`inline-flex items-center gap-1.5 text-xs font-mono transition-colors hover:text-glow-pink ${
-            isNight ? "text-white/45" : "text-ink-500"
-          }`}
-        >
-          <ArrowRight className="h-3.5 w-3.5 rotate-180" />
-          Draft Gallery
-        </Link>
-        <span className={`text-[11px] font-mono ${isNight ? "text-white/35" : "text-ink-400"}`}>
-          landing/v5_sequence_story
-        </span>
       </div>
     </div>
   );

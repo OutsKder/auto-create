@@ -1,6 +1,6 @@
 doubao:
   provider: doubao
-  model: ep-20260423222933-n4v5g
+  model: ep-20260423223020-fxwrn
   api_key: ${DOUBAO_API_KEY}
   base_url: https://ark.cn-beijing.volces.com/api/v3
   temperature: 0.7

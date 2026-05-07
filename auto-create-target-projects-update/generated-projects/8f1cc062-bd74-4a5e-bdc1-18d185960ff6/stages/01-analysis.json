@@ -1,0 +1,91 @@
+{
+  "pipeline_id": "8f1cc062-bd74-4a5e-bdc1-18d185960ff6",
+  "stage": {
+    "id": "analysis",
+    "name": "需求分析",
+    "status": "RUNNING",
+    "meta": {
+      "input": "自然语言需求描述",
+      "output": "结构化需求文档（含验收标准）",
+      "acceptance": [
+        "需求范围和边界明确",
+        "歧义项被标记并给出澄清建议",
+        "每条核心需求可追踪到验收标准"
+      ]
+    }
+  },
+  "created_at": "2026-05-06T14:01:06.012259+00:00",
+  "outputs": {
+    "requirement_structured": {
+      "is_clear": false,
+      "clarifying_questions": [
+        "请重新提供完整、清晰的需求内容，以便进行后续分析处理"
+      ],
+      "goal": "请求获取需求信息失败，无法识别当前需求目标",
+      "features": [],
+      "constraints": [],
+      "acceptance_criteria": [],
+      "assumptions": [],
+      "out_of_scope": []
+    }
+  },
+  "context": {
+    "project_mode": "existing",
+    "project_source": "uploaded_zip",
+    "imported_project": {
+      "project_key": "南京邮电大学网页-v2",
+      "import_id": "20260506-220038",
+      "filename": "南京邮电大学网页-v2.zip",
+      "repo_path": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260506-220038\\source",
+      "zip_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260506-220038\\南京邮电大学网页-v2.zip",
+      "file_count": 4,
+      "sample_files": [
+        "acceptance-report.json",
+        "manifest.json",
+        "README.md",
+        "workspace/index.html"
+      ]
+    },
+    "codebase": {
+      "repo_path": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260506-220038\\source"
+    },
+    "requirement_raw": "改成北京邮电大学",
+    "requirement_structured": {
+      "is_clear": false,
+      "clarifying_questions": [
+        "请重新提供完整、清晰的需求内容，以便进行后续分析处理"
+      ],
+      "goal": "请求获取需求信息失败，无法识别当前需求目标",
+      "features": [],
+      "constraints": [],
+      "acceptance_criteria": [],
+      "assumptions": [],
+      "out_of_scope": []
+    },
+    "meta_trace": {
+      "retry_meta": {
+        "elapsed_seconds": 17.94,
+        "total_tokens": 2653,
+        "prompt_tokens": 2470,
+        "completion_tokens": 183,
+        "token_source": "estimate",
+        "prompts_snapshot": [
+          [
+            "你是一个严格的JSON纠错助手。请修复以下输出，使其完全符合给定的JSON Schema。不要输出任何多余内容，只需输出合法的JSON。",
+            "【原始预期格式】:\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{\"additionalProperties\": false, \"properties\": {\"is_clear\": {\"default\": true, \"title\": \"Is Clear\", \"type\": \"boolean\"}, \"clarifying_questions\": {\"items\": {\"type\": \"string\"}, \"title\": \"Clarifying Questions\", \"type\": \"array\"}, \"goal\": {\"title\": \"Goal\", \"type\": \"string\"}, \"features\": {\"items\": {\"type\": \"string\"}, \"title\": \"Features\", \"type\": \"array\"}, \"constraints\": {\"items\": {\"type\": \"string\"}, \"title\": \"Constraints\", \"type\": \"array\"}, \"acceptance_criteria\": {\"items\": {\"type\": \"string\"}, \"title\": \"Acceptance Criteria\", \"type\": \"array\"}, \"assumptions\": {\"items\": {\"type\": \"string\"}, \"title\": \"Assumptions\", \"type\": \"array\"}, \"out_of_scope\": {\"items\": {\"type\": \"string\"}, \"title\": \"Out Of Scope\", \"type\": \"array\"}}, \"required\": [\"goal\"]}\n```\n\n【错误的输出】:\n请求失败: peer closed connection without sending complete message body (incomplete chunked read)\n\n【错误信息】:\nInvalid json output: 请求失败: peer closed connection without sending complete message body (incomplete chunked read)\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE \n\n请直接输出修复后的JSON:"
+          ]
+        ],
+        "completion_snapshot": "{\n    \"is_clear\": false,\n    \"goal\": \"请求获取需求信息失败，无法识别当前需求目标\",\n    \"clarifying_questions\": [\"请重新提供完整、清晰的需求内容，以便进行后续分析处理\"]\n}"
+      }
+    },
+    "artifact_dir": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\8f1cc062-bd74-4a5e-bdc1-18d185960ff6",
+    "stage_artifacts": {
+      "analysis": {
+        "root": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\8f1cc062-bd74-4a5e-bdc1-18d185960ff6",
+        "stage_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\8f1cc062-bd74-4a5e-bdc1-18d185960ff6\\stages\\01-analysis.json",
+        "context_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\8f1cc062-bd74-4a5e-bdc1-18d185960ff6\\context.json",
+        "summary_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\8f1cc062-bd74-4a5e-bdc1-18d185960ff6\\README.md"
+      }
+    }
+  }
+}

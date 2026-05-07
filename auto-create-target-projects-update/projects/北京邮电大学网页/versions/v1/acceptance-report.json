@@ -1,0 +1,41 @@
+{
+  "pipeline_id": "608a2dd2-5ae6-488e-a37e-481638f14f40",
+  "project_title": "北京邮电大学网页",
+  "project_key": "北京邮电大学网页",
+  "version": "v1",
+  "generated_at": "2026-05-06T14:10:29.986413+00:00",
+  "requirement": "上面的字改成六个字“北京邮电大学”。",
+  "test_passed": true,
+  "checks": [
+    {
+      "name": "entry_file_exists",
+      "passed": true,
+      "detail": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\608a2dd2-5ae6-488e-a37e-481638f14f40\\workspace\\index.html"
+    },
+    {
+      "name": "expected_text_present",
+      "passed": true,
+      "detail": "北京邮电大学"
+    },
+    {
+      "name": "contains_expected_text",
+      "passed": true,
+      "detail": "北京邮电大学"
+    },
+    {
+      "name": "visible_text_exact",
+      "passed": true,
+      "detail": "北京邮电大学"
+    },
+    {
+      "name": "declares_utf8",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "no_external_resources",
+      "passed": true,
+      "detail": ""
+    }
+  ]
+}

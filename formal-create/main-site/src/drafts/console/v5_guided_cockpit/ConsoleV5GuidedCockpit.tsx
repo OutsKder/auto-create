@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
@@ -10,17 +11,223 @@ import {
   ExternalLink,
   FileText,
   Loader2,
+  LogOut,
+  Moon,
   Play,
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  Sun,
   Terminal,
+  UserCircle,
 } from "lucide-react";
 import { pipelineApi } from "../../../api/pipelineApi";
-import type { Pipeline, PipelineStage, PipelineState } from "../../../api/pipelineApi";
+import type { ImportedProject, Pipeline, PipelineStage, PipelineState } from "../../../api/pipelineApi";
 import WeaveMark from "../../../components/WeaveMark";
 
 const DEFAULT_REQUIREMENT = "生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。";
+
+type RoleKey = "first" | "product" | "tech" | "manager";
+type ConsoleTheme = "day" | "night";
+type ProjectMode = "new" | "existing";
+
+type RoleConfig = {
+  label: string;
+  userLine: string;
+  sidebarEyebrow: string;
+  sidebarTitle: string;
+  sidebarDescription: string;
+  waitingApprovalHint: string;
+  directContinueLabel: string;
+  criteriaByStage: Partial<Record<string, string[]>>;
+};
+
+const ROLE_CONFIG: Record<RoleKey, RoleConfig> = {
+  first: {
+    label: "新手视角",
+    userLine: "织界实验室 · 新手引导",
+    sidebarEyebrow: "从一句需求开始",
+    sidebarTitle: "我会一步步带你完成交付。",
+    sidebarDescription: "你只需要看懂 AI 产物，决定是修改、继续，还是退回重写。",
+    waitingApprovalHint: "先看中间产物是否符合你的意思，不懂技术细节也可以继续。",
+    directContinueLabel: "看起来正确，继续下一步",
+    criteriaByStage: {
+      analysis: ["这是不是我想要的", "下一步会做什么"],
+      design: ["方向是否正确", "是否有看不懂但需要解释的地方"],
+      coding: ["是否生成完整文件", "页面能不能打开"],
+    },
+  },
+  product: {
+    label: "产品视角",
+    userLine: "织界实验室 · 产品/业务",
+    sidebarEyebrow: "业务目标优先",
+    sidebarTitle: "先确保 AI 做对事。",
+    sidebarDescription: "默认突出目标、边界和验收标准，避免后续生成偏题。",
+    waitingApprovalHint: "重点检查业务目标、范围边界和验收标准是否完整。",
+    directContinueLabel: "业务方向正确，继续",
+    criteriaByStage: {
+      analysis: ["业务目标", "边界条件", "验收标准"],
+      design: ["范围是否收敛", "有没有做多或做偏"],
+      testing: ["验收标准是否逐条覆盖"],
+    },
+  },
+  tech: {
+    label: "技术视角",
+    userLine: "织界实验室 · 技术负责人",
+    sidebarEyebrow: "工程落地优先",
+    sidebarTitle: "先确认方案能不能落地。",
+    sidebarDescription: "默认突出文件计划、实现风险、测试结果和开发者详情。",
+    waitingApprovalHint: "重点检查文件计划、实现边界、fallback 风险和测试可运行性。",
+    directContinueLabel: "技术上可落地，继续",
+    criteriaByStage: {
+      design: ["文件计划", "实现边界", "技术风险"],
+      coding: ["完整文件", "无 fallback", "可运行"],
+      testing: ["关键路径", "失败上下文"],
+    },
+  },
+  manager: {
+    label: "管理视角",
+    userLine: "织界实验室 · 交付管理",
+    sidebarEyebrow: "进度与交付优先",
+    sidebarTitle: "先看是否阻塞、能否交付。",
+    sidebarDescription: "默认突出阶段状态、风险、阻塞和最终交付包。",
+    waitingApprovalHint: "重点判断是否允许进入下一阶段，是否存在明显风险或阻塞。",
+    directContinueLabel: "批准进入下一阶段",
+    criteriaByStage: {
+      analysis: ["目标是否清楚", "是否值得继续"],
+      review: ["是否有阻塞", "风险是否可接受"],
+      delivery: ["是否可验收", "是否可下载"],
+    },
+  },
+};
+
+const CONSOLE_THEME_STORAGE_KEY = "console-v5-theme";
+
+const CONSOLE_THEME_CSS = `
+.console-cockpit {
+  transition: background-color 220ms ease, color 220ms ease;
+}
+.console-day {
+  background:
+    radial-gradient(circle at 12% -10%, rgba(96, 135, 255, 0.10), transparent 34rem),
+    radial-gradient(circle at 88% 6%, rgba(168, 85, 247, 0.08), transparent 30rem),
+    linear-gradient(180deg, #fbfbfc 0%, #f4f5f8 100%) !important;
+}
+.console-shell {
+  position: relative;
+  z-index: 1;
+}
+.console-ambient {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.console-ambient::before,
+.console-ambient::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+}
+.console-ambient::before {
+  left: -12rem;
+  top: 10rem;
+  height: 26rem;
+  width: 26rem;
+  background: rgba(96, 135, 255, 0.12);
+}
+.console-ambient::after {
+  right: -10rem;
+  top: 1rem;
+  height: 24rem;
+  width: 24rem;
+  background: rgba(168, 85, 247, 0.10);
+}
+.console-topbar,
+.console-glass-card {
+  backdrop-filter: blur(18px);
+}
+.console-night {
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(96, 135, 255, 0.20), transparent 34rem),
+    radial-gradient(circle at 90% 12%, rgba(168, 85, 247, 0.15), transparent 30rem),
+    #050507 !important;
+  color: #f4f4f5;
+}
+.console-night .console-ambient::before {
+  background: rgba(96, 135, 255, 0.22);
+}
+.console-night .console-ambient::after {
+  background: rgba(168, 85, 247, 0.16);
+}
+.console-night .console-topbar,
+.console-night .console-glass-card {
+  background-color: rgba(24, 24, 27, 0.70) !important;
+}
+.console-night .console-panel-gradient {
+  background-image: linear-gradient(135deg, rgba(39, 39, 42, 0.82), rgba(9, 9, 11, 0.72)) !important;
+  background-color: rgba(24, 24, 27, 0.78) !important;
+}
+.console-night .bg-white {
+  background-color: rgba(24, 24, 27, 0.82) !important;
+}
+.console-night .bg-zinc-50 {
+  background-color: rgba(39, 39, 42, 0.58) !important;
+}
+.console-night .bg-zinc-100 {
+  background-color: rgba(63, 63, 70, 0.55) !important;
+}
+.console-night .bg-zinc-950 {
+  background-color: #f4f4f5 !important;
+}
+.console-night .border-zinc-200,
+.console-night .border-zinc-100 {
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+.console-night .text-zinc-950,
+.console-night .text-zinc-900,
+.console-night .text-zinc-800 {
+  color: #f4f4f5 !important;
+}
+.console-night .text-zinc-700,
+.console-night .text-zinc-600 {
+  color: rgba(244, 244, 245, 0.72) !important;
+}
+.console-night .text-zinc-500,
+.console-night .text-zinc-400 {
+  color: rgba(212, 212, 216, 0.56) !important;
+}
+.console-night .text-white {
+  color: #09090b !important;
+}
+.console-night input,
+.console-night textarea {
+  background-color: rgba(9, 9, 11, 0.52) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  color: #f4f4f5 !important;
+}
+.console-night input::placeholder,
+.console-night textarea::placeholder {
+  color: rgba(212, 212, 216, 0.38) !important;
+}
+.console-night .shadow-sm {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28) !important;
+}
+.console-night .bg-emerald-50 {
+  background-color: rgba(6, 78, 59, 0.24) !important;
+}
+.console-night .bg-amber-50 {
+  background-color: rgba(120, 53, 15, 0.24) !important;
+}
+.console-night .bg-blue-50 {
+  background-color: rgba(30, 64, 175, 0.24) !important;
+}
+.console-night .bg-red-50 {
+  background-color: rgba(127, 29, 29, 0.24) !important;
+}
+`;
 
 const STAGE_GUIDANCE: Record<string, { title: string; running: string; done: string; userCheck: string }> = {
   analysis: {
@@ -78,6 +285,25 @@ const STAGE_CONTEXT_KEY: Record<string, string> = {
   review: "review_result",
   delivery: "delivery",
 };
+
+/** 与后端检查点一致：等待审批时以 checkpoint.stageId 为准，避免 current_stage 滞后。 */
+function resolveWorkflowStageId(pipeline: Pipeline | null): string {
+  if (!pipeline) return "analysis";
+  if (pipeline.state === "WAITING_APPROVAL" && pipeline.checkpoint?.stageId) {
+    return pipeline.checkpoint.stageId;
+  }
+  return pipeline.currentStage?.id || pipeline.checkpoint?.stageId || "analysis";
+}
+
+function workflowHasProgress(pipeline: Pipeline | null): boolean {
+  if (!pipeline?.id) return false;
+  if (pipeline.state !== "CREATED") return true;
+  return Boolean(
+    pipeline.stages?.some(
+      (s) => s.status === "DONE" || s.status === "RUNNING" || s.status === "WAITING_APPROVAL"
+    )
+  );
+}
 
 const DECISION_COPY: Record<
   string,
@@ -141,7 +367,12 @@ const DECISION_COPY: Record<
 };
 
 export default function ConsoleV5GuidedCockpit() {
+  const [searchParams] = useSearchParams();
+  const [theme, setTheme] = useState<ConsoleTheme>(() => getInitialConsoleTheme(searchParams.get("theme")));
   const [requirement, setRequirement] = useState(DEFAULT_REQUIREMENT);
+  const [projectMode, setProjectMode] = useState<ProjectMode>("new");
+  const [projectArchive, setProjectArchive] = useState<File | null>(null);
+  const [importedProject, setImportedProject] = useState<ImportedProject | null>(null);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [checkpointId, setCheckpointId] = useState<string | null>(null);
@@ -153,8 +384,15 @@ export default function ConsoleV5GuidedCockpit() {
   const state: PipelineState = pipeline?.state || "CREATED";
   const context = pipeline?.context || {};
   const lastError = asString(context.last_error);
-  const currentStageId = pipeline?.currentStage?.id || pipeline?.checkpoint?.stageId || "analysis";
+  const currentStageId = resolveWorkflowStageId(pipeline);
   const currentStage = pipeline?.currentStage;
+  const role = normalizeRole(searchParams.get("role"));
+  const roleConfig = ROLE_CONFIG[role];
+  const isNight = theme === "night";
+
+  useEffect(() => {
+    window.localStorage.setItem(CONSOLE_THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   function syncPipeline(next: Pipeline) {
     setPipeline(next);
@@ -196,11 +434,38 @@ export default function ConsoleV5GuidedCockpit() {
     setIsBusy(true);
     setNotice("");
     try {
-      const created = await pipelineApi.createPipeline({ requirement: activeRequirement });
+      let projectImport = importedProject;
+      if (projectMode === "existing") {
+        if (!projectArchive && !projectImport) {
+          setNotice("请先上传已有项目的 ZIP 压缩包。");
+          return;
+        }
+        if (projectArchive && !projectImport) {
+          projectImport = await pipelineApi.importProjectZip(projectArchive);
+          setImportedProject(projectImport);
+        }
+      }
+
+      const context =
+        projectMode === "existing" && projectImport
+          ? {
+              project_mode: "existing",
+              project_source: "uploaded_zip",
+              imported_project: projectImport,
+              codebase: {
+                repo_path: projectImport.repo_path,
+              },
+            }
+          : {
+              project_mode: "new",
+              project_source: "scratch",
+            };
+
+      const created = await pipelineApi.createPipeline({ requirement: activeRequirement, context });
       syncPipeline(created);
       const running = await runCurrentStage(created.id);
       if (running.state === "WAITING_APPROVAL") {
-        setNotice("第一阶段已经完成，请先审阅 AI 的理解。");
+        setNotice(projectMode === "existing" ? "项目已导入，第一阶段已经完成，请先审阅 AI 对项目和需求的理解。" : "第一阶段已经完成，请先审阅 AI 的理解。");
       }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "创建流水线失败。");
@@ -237,7 +502,7 @@ export default function ConsoleV5GuidedCockpit() {
     try {
       const contextPatch = buildContextPatchFromDraft(pipeline, editableDraft);
       const approved = await pipelineApi.approveCheckpoint(checkpointId, {
-        note: "用户人工修改 AI 草稿后继续下一阶段。",
+        note: "用户人工修改 AI 阶段产物后继续下一阶段。",
         contextPatch,
       });
       syncPipeline(approved);
@@ -273,9 +538,11 @@ export default function ConsoleV5GuidedCockpit() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-zinc-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4">
+    <main className={`console-cockpit relative min-h-screen overflow-hidden ${isNight ? "console-night" : "console-day text-zinc-950"}`}>
+      <style>{CONSOLE_THEME_CSS}</style>
+      <div className="console-ambient" />
+      <div className="console-shell mx-auto flex min-h-screen w-full max-w-[1440px] flex-col px-4 py-4 sm:px-6 lg:px-8">
+        <header className="console-topbar sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] border border-zinc-200 bg-white/80 px-3 py-3 shadow-sm">
           <div className="flex items-center gap-3">
             <Link
               to="/"
@@ -283,41 +550,138 @@ export default function ConsoleV5GuidedCockpit() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <WeaveMark className="h-8 w-8" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-zinc-200 bg-white shadow-sm">
+              <WeaveMark className="h-6 w-6" />
+            </div>
             <div>
-              <div className="text-sm font-semibold text-zinc-950">v5 · Guided Cockpit</div>
-              <div className="text-xs text-zinc-500">用户引导优先，开发者信息默认折叠</div>
+              <div className="text-sm font-semibold text-zinc-950">织界 AI 交付工作台</div>
+              <div className="text-xs text-zinc-500">Guided Cockpit · 用户决策优先</div>
             </div>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Real AI Pipeline
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setTheme(isNight ? "day" : "night")}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+              aria-label={isNight ? "切换到白天模式" : "切换到夜间模式"}
+            >
+              {isNight ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              {isNight ? "白天" : "夜间"}
+            </button>
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Real AI Pipeline
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-1 shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-950 text-white">
+                <UserCircle className="h-4 w-4" />
+              </div>
+              <div className="hidden leading-tight sm:block">
+                <div className="text-xs font-semibold text-zinc-950">Demo 用户 · {roleConfig.label}</div>
+                <div className="text-[11px] text-zinc-500">{roleConfig.userLine}</div>
+              </div>
+              <Link
+                to="/drafts/login/v2"
+                className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+                aria-label="返回登录页"
+              >
+                <LogOut className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </header>
 
-        <section className="grid flex-1 gap-5 py-5 lg:grid-cols-[340px_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+        <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+            <div className="console-glass-card overflow-hidden rounded-[2rem] border border-zinc-200 bg-white/90 p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
                 <Sparkles className="h-3.5 w-3.5" />
-                从一句需求开始
+                {roleConfig.sidebarEyebrow}
+                </div>
+                <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-500">
+                  {roleConfig.label}
+                </span>
               </div>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950">
-                不展示服务器细节，只引导你完成交付。
+                {roleConfig.sidebarTitle}
               </h1>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                你只需要判断 AI 是否理解正确、方案是否可接受、最终结果是否可验收。
+                {roleConfig.sidebarDescription}
               </p>
 
-              <label className="mt-5 block text-sm font-medium text-zinc-800">你的目标</label>
+              <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-1">
+                {[
+                  { key: "new" as const, label: "从 0 创建" },
+                  { key: "existing" as const, label: "导入已有项目" },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setProjectMode(item.key)}
+                    className={`h-9 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 ${
+                      projectMode === item.key
+                        ? "bg-white text-zinc-950 shadow-sm"
+                        : "text-zinc-500 hover:bg-white/70 hover:text-zinc-900"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {projectMode === "existing" && (
+                <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-zinc-800">上传已有项目 ZIP</div>
+                      <p className="mt-1 text-[11px] leading-5 text-zinc-500">
+                        AI 会先理解已有代码，再按你的需求生成修改方案和变更文件。
+                      </p>
+                      <input
+                        type="file"
+                        accept=".zip,application/zip"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setProjectArchive(file);
+                          setImportedProject(null);
+                        }}
+                        className="mt-3 block w-full text-xs text-zinc-500 file:mr-3 file:h-8 file:rounded-xl file:border-0 file:bg-zinc-950 file:px-3 file:text-xs file:font-semibold file:text-white hover:file:bg-zinc-800"
+                      />
+                      {(projectArchive || importedProject) && (
+                        <div className="mt-2 rounded-xl bg-white px-3 py-2 text-[11px] leading-5 text-zinc-600">
+                          {importedProject
+                            ? `${importedProject.filename} · 已导入 ${importedProject.file_count} 个文件`
+                            : `${projectArchive?.name} · 点击开始后导入`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <label className="mt-5 block text-sm font-medium text-zinc-800">
+                {projectMode === "existing" ? "你想让 AI 修改什么" : "你的目标"}
+              </label>
               <textarea
                 value={requirement}
                 onChange={(event) => setRequirement(event.target.value)}
                 className="mt-2 min-h-32 w-full resize-none rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-6 text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100"
-                placeholder="例如：生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。"
+                placeholder={
+                  projectMode === "existing"
+                    ? "例如：在这个项目里新增登录页，保持现有视觉风格，并输出可运行版本。"
+                    : "例如：生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。"
+                }
               />
 
-              <div className="mt-4 grid gap-2">
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-xs font-medium text-zinc-400">快速开始</div>
+                <div className="text-[11px] text-zinc-400">可替换为自己的目标</div>
+              </div>
+              <div className="mt-2 grid gap-2">
                 {[
                   "生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。",
                   "生成一个可打开的产品介绍页，突出 AI 交付流程。",
@@ -340,21 +704,46 @@ export default function ConsoleV5GuidedCockpit() {
                 disabled={isBusy}
                 className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2"
               >
-                {isBusy ? "AI 正在启动" : pipeline ? "重新生成" : "开始 AI 交付"}
+                {isBusy
+                  ? pipeline
+                    ? "处理中"
+                    : projectMode === "existing"
+                    ? "正在导入并启动"
+                    : "AI 正在启动"
+                  : pipeline
+                  ? "重新生成"
+                  : projectMode === "existing"
+                  ? "导入项目并开始"
+                  : "开始 AI 交付"}
                 {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               </button>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-200 pt-4">
+                {[
+                  ["01", "理解"],
+                  ["02", "执行"],
+                  ["03", "交付"],
+                ].map(([index, label]) => (
+                  <div key={index} className="rounded-2xl bg-zinc-50 px-3 py-2">
+                    <div className="text-[11px] font-semibold text-zinc-400">{index}</div>
+                    <div className="mt-0.5 text-xs font-medium text-zinc-800">{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            <ObservabilityPanel pipeline={pipeline} />
             <DeveloperDetails pipeline={pipeline} />
           </aside>
 
-          <section className="space-y-4">
+          <section className="space-y-5">
             <GuidedProgressCard
               state={state}
               isBusy={isBusy}
               currentStageId={currentStageId}
               currentStage={currentStage}
               lastError={lastError}
+              roleConfig={roleConfig}
             />
 
             <StageTimeline stages={pipeline?.stages} currentStageId={currentStageId} state={state} />
@@ -369,11 +758,14 @@ export default function ConsoleV5GuidedCockpit() {
 
             <StageDecisionGate
               state={state}
+              pipeline={pipeline}
               checkpointTitle={pipeline?.checkpoint?.title}
               currentStageId={currentStageId}
               isBusy={isBusy}
               editableDraft={editableDraft}
               regenerateFeedback={regenerateFeedback}
+              roleConfig={roleConfig}
+              allowAdvancedJsonEditor={role === "tech"}
               onDraftChange={setEditableDraft}
               onFeedbackChange={setRegenerateFeedback}
               onApprove={approveAndContinue}
@@ -395,15 +787,35 @@ function GuidedProgressCard({
   currentStageId,
   currentStage,
   lastError,
+  roleConfig,
 }: {
   state: PipelineState;
   isBusy: boolean;
   currentStageId: string;
   currentStage?: PipelineStage;
   lastError: string;
+  roleConfig: RoleConfig;
 }) {
   const guidance = STAGE_GUIDANCE[currentStageId] || STAGE_GUIDANCE.analysis;
   const friendlyError = toFriendlyError(lastError);
+  const isStarting = state === "CREATED" && isBusy;
+  const stageLabel = state === "CREATED" && !isStarting ? "尚未开始" : currentStage?.name || guidance.title;
+  const userActionLabel =
+    state === "WAITING_APPROVAL"
+      ? roleConfig.waitingApprovalHint
+      : state === "RUNNING"
+      ? "等待 AI 完成"
+      : isStarting
+      ? "等待流水线启动"
+      : "输入目标并启动";
+  const systemActionLabel =
+    state === "CREATED"
+      ? isStarting
+        ? "创建流水线并进入需求理解"
+        : "等待你的目标"
+      : currentStageId === "coding"
+      ? "失败自动打回重写"
+      : "生成可审阅结果";
 
   const title =
     state === "FINISHED"
@@ -412,7 +824,7 @@ function GuidedProgressCard({
       ? "AI 生成遇到格式问题，正在按规则处理"
       : state === "WAITING_APPROVAL"
       ? `${guidance.title}等待你确认`
-      : state === "RUNNING" || isBusy
+      : state === "RUNNING" || isStarting
       ? guidance.running
       : "准备创建第一条 AI 交付流水线";
 
@@ -422,45 +834,39 @@ function GuidedProgressCard({
       : friendlyError
       ? friendlyError
       : state === "WAITING_APPROVAL"
-      ? guidance.userCheck
-      : state === "RUNNING" || isBusy
+      ? roleConfig.waitingApprovalHint
+      : state === "RUNNING" || isStarting
       ? "你暂时不需要操作。完成后系统会停在审批点，让你判断是否继续。"
       : "输入需求后，AI 会先做需求理解，然后一步步生成方案、代码、测试和交付摘要。";
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-100 p-5">
+    <div className="console-glass-card overflow-hidden rounded-[2rem] border border-zinc-200 bg-white/90 shadow-sm">
+      <div className="console-panel-gradient border-b border-zinc-100 bg-gradient-to-br from-white to-zinc-50/80 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Current Guidance</div>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">{title}</h2>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">{body}</p>
           </div>
-          <StatusBadge state={state} hasError={Boolean(friendlyError)} />
+          <StatusBadge state={state} isBusy={isBusy} hasError={Boolean(friendlyError)} />
         </div>
       </div>
 
       <div className="grid gap-3 p-5 md:grid-cols-3">
-        <GuidanceMetric label="当前阶段" value={currentStage?.name || guidance.title} />
-        <GuidanceMetric
-          label="你需要做什么"
-          value={state === "WAITING_APPROVAL" ? "审阅后批准或退回" : state === "RUNNING" ? "等待 AI 完成" : "输入目标并启动"}
-        />
-        <GuidanceMetric
-          label="系统会做什么"
-          value={currentStageId === "coding" ? "失败自动打回重写" : "生成可审阅结果"}
-        />
+        <GuidanceMetric label="当前阶段" value={stageLabel} />
+        <GuidanceMetric label="你需要做什么" value={userActionLabel} />
+        <GuidanceMetric label="系统会做什么" value={systemActionLabel} />
       </div>
     </div>
   );
 }
 
-function StatusBadge({ state, hasError }: { state: PipelineState; hasError: boolean }) {
+function StatusBadge({ state, isBusy, hasError }: { state: PipelineState; isBusy: boolean; hasError: boolean }) {
   if (hasError) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
         <RefreshCw className="h-3.5 w-3.5" />
-        自动重试中
+        {state === "RUNNING" ? "自动重试中" : "需关注"}
       </span>
     );
   }
@@ -477,6 +883,14 @@ function StatusBadge({ state, hasError }: { state: PipelineState; hasError: bool
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
         <CheckCircle2 className="h-3.5 w-3.5" />
         已完成
+      </span>
+    );
+  }
+  if (state === "CREATED" && isBusy) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        启动中
       </span>
     );
   }
@@ -509,7 +923,7 @@ function StageTimeline({
   const displayStages = stages?.length ? stages : FALLBACK_STAGES;
 
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="console-glass-card rounded-[2rem] border border-zinc-200 bg-white/90 p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Flow</div>
@@ -518,15 +932,16 @@ function StageTimeline({
         <div className="text-xs text-zinc-400">6 steps</div>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-6">
+      <div className="mt-5 grid gap-2 md:grid-cols-6">
         {displayStages.map((stage, index) => {
           const status = "status" in stage ? stage.status : "PENDING";
-          const active = stage.id === currentStageId && state !== "FINISHED";
+          const active = stage.id === currentStageId && state !== "CREATED" && state !== "FINISHED";
+          const running = active && state === "RUNNING";
           const done = status === "DONE" || state === "FINISHED";
           return (
             <div
               key={stage.id}
-              className={`rounded-2xl border p-3 transition-colors ${
+              className={`rounded-[1.25rem] border p-3 transition-colors ${
                 active
                   ? "border-zinc-950 bg-zinc-950 text-white"
                   : done
@@ -536,7 +951,13 @@ function StageTimeline({
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold">{String(index + 1).padStart(2, "0")}</span>
-                {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CircleDashed className="h-3.5 w-3.5" />}
+                {done ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : running ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CircleDashed className="h-3.5 w-3.5" />
+                )}
               </div>
               <div className="mt-3 text-sm font-medium">{stage.name}</div>
             </div>
@@ -548,8 +969,11 @@ function StageTimeline({
 }
 
 function AiResultSummary({ pipeline }: { pipeline: Pipeline | null }) {
+  if (!pipeline) return null;
+  if (pipeline.state === "CREATED") return null;
+
   const context = pipeline?.context || {};
-  const stageId = pipeline?.checkpoint?.stageId || pipeline?.currentStage?.id || "analysis";
+  const stageId = resolveWorkflowStageId(pipeline);
   const summary = buildHumanSummary(stageId, context, pipeline?.state);
 
   if (pipeline?.state === "WAITING_APPROVAL") {
@@ -558,9 +982,9 @@ function AiResultSummary({ pipeline }: { pipeline: Pipeline | null }) {
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
           <div>
             <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Read-only Summary</div>
-            <h3 className="mt-1 text-base font-semibold text-zinc-950">查看 AI 草稿摘要</h3>
+            <h3 className="mt-1 text-base font-semibold text-zinc-950">查看 AI 产物摘要</h3>
             <p className="mt-1 text-sm leading-6 text-zinc-500">
-              主操作区已经提供可编辑草稿；这里仅用于快速回看 AI 的只读摘要。
+              主操作区已经提供可编辑产物；这里仅用于快速回看 AI 的只读摘要。
             </p>
           </div>
           <ChevronDown className="h-4 w-4 flex-none text-zinc-400 transition-transform group-open:rotate-180" />
@@ -579,7 +1003,7 @@ function AiResultSummary({ pipeline }: { pipeline: Pipeline | null }) {
   }
 
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="console-glass-card rounded-[2rem] border border-zinc-200 bg-white/90 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">AI Result</div>
@@ -618,7 +1042,7 @@ function DeliveryActions({ pipeline }: { pipeline: Pipeline | null }) {
   const canPreview = Boolean(asString(delivery.preview_url) || asString(deliveryPackage.preview_url));
 
   return (
-    <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+    <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-700/60">Delivery Package</div>
@@ -683,11 +1107,14 @@ function DeliveryActions({ pipeline }: { pipeline: Pipeline | null }) {
 
 function StageDecisionGate({
   state,
+  pipeline,
   checkpointTitle,
   currentStageId,
   isBusy,
   editableDraft,
   regenerateFeedback,
+  roleConfig,
+  allowAdvancedJsonEditor,
   onDraftChange,
   onFeedbackChange,
   onApprove,
@@ -695,11 +1122,14 @@ function StageDecisionGate({
   onReject,
 }: {
   state: PipelineState;
+  pipeline: Pipeline | null;
   checkpointTitle?: string;
   currentStageId: string;
   isBusy: boolean;
   editableDraft: string;
   regenerateFeedback: string;
+  roleConfig: RoleConfig;
+  allowAdvancedJsonEditor: boolean;
   onDraftChange: (value: string) => void;
   onFeedbackChange: (value: string) => void;
   onApprove: () => Promise<void>;
@@ -708,9 +1138,22 @@ function StageDecisionGate({
 }) {
   const decision = DECISION_COPY[currentStageId] || DECISION_COPY.analysis;
   const canApprove = state === "WAITING_APPROVAL";
+  const criteria = uniqueStrings([
+    ...(roleConfig.criteriaByStage[currentStageId] || []),
+    ...decision.criteria,
+  ]);
+  const stageName =
+    pipeline?.stages?.find((s) => s.id === currentStageId)?.name ||
+    FALLBACK_STAGES.find((s) => s.id === currentStageId)?.name ||
+    currentStageId;
+  const idleHint = workflowHasProgress(pipeline)
+    ? `流程已启动。当前关注阶段：「${stageName}」。若此处文案与上方进度不一致，请稍等同步或刷新页面后再试。`
+    : "先输入目标并启动 AI 交付流程。";
 
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className={`console-glass-card rounded-[2rem] border p-5 shadow-sm ${
+      canApprove ? "border-zinc-300 bg-white/95" : "border-zinc-200 bg-white/85"
+    }`}>
       <div className="flex items-center gap-2">
         <ShieldCheck className={`h-4 w-4 ${canApprove ? "text-blue-600" : "text-zinc-400"}`} />
         <h2 className="text-sm font-semibold text-zinc-950">人工决策闸门</h2>
@@ -719,24 +1162,26 @@ function StageDecisionGate({
         {canApprove
           ? checkpointTitle || decision.object
           : state === "RUNNING"
-          ? "AI 正在工作，你可以等待它停在下一个确认点。"
+          ? `AI 正在执行「${stageName}」阶段，完成后会停在审批点。`
           : state === "FINISHED"
           ? "流程已完成，请查看结果并打开交付文件验收。"
-          : "先输入目标并启动 AI 交付流程。"}
+          : idleHint}
       </p>
 
       {canApprove && (
         <div className="mt-4 space-y-4">
-          <div className="overflow-hidden rounded-[1.75rem] border border-zinc-200 bg-gradient-to-b from-white to-zinc-50">
+          <div className="console-panel-gradient overflow-hidden rounded-[1.75rem] border border-zinc-200 bg-gradient-to-b from-white to-zinc-50">
             <div className="border-b border-zinc-200/70 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Editable Draft</div>
-                  <h3 className="mt-1 text-lg font-semibold tracking-tight text-zinc-950">当前阶段草稿</h3>
+                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">
+                    Editable Draft · {roleConfig.label}
+                  </div>
+                  <h3 className="mt-1 text-lg font-semibold tracking-tight text-zinc-950">当前阶段产物</h3>
                   <p className="mt-1 text-sm leading-6 text-zinc-500">{decision.object}</p>
                 </div>
                 <div className="flex max-w-xl flex-wrap gap-2">
-                  {decision.criteria.map((item) => (
+                  {criteria.map((item) => (
                     <span key={item} className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-500">
                       {item}
                     </span>
@@ -749,6 +1194,7 @@ function StageDecisionGate({
               <StageEditableForm
                 stageId={currentStageId}
                 draft={editableDraft}
+                allowAdvancedJsonEditor={allowAdvancedJsonEditor}
                 onDraftChange={onDraftChange}
               />
             </div>
@@ -771,7 +1217,7 @@ function StageDecisionGate({
                 disabled={isBusy}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
               >
-                不修改，直接继续
+                {roleConfig.directContinueLabel}
                 {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               </button>
             </div>
@@ -813,19 +1259,21 @@ function StageDecisionGate({
 function StageEditableForm({
   stageId,
   draft,
+  allowAdvancedJsonEditor,
   onDraftChange,
 }: {
   stageId: string;
   draft: string;
+  allowAdvancedJsonEditor: boolean;
   onDraftChange: (value: string) => void;
 }) {
   const parsed = parseDraftObject(draft);
   if (!parsed) {
     return (
       <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
-        <div className="text-sm font-semibold text-red-900">草稿格式需要修正</div>
+        <div className="text-sm font-semibold text-red-900">产物格式需要修正</div>
         <p className="mt-1 text-xs leading-5 text-red-800/70">
-          当前草稿不是合法 JSON。你可以先在这里修正，或退回让 AI 重新生成。
+          当前产物不是合法 JSON。你可以先在这里修正，或退回让 AI 重新生成。
         </p>
         <textarea
           value={draft}
@@ -858,20 +1306,22 @@ function StageEditableForm({
         <DeliveryEditForm draft={parsed} onChange={updateDraft} />
       )}
 
-      <details className="group rounded-2xl border border-zinc-200 bg-white p-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold text-zinc-800">高级编辑：原始 JSON</div>
-            <div className="mt-0.5 text-[11px] text-zinc-500">仅在表单无法表达时使用。</div>
-          </div>
-          <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
-        </summary>
-        <textarea
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          className="mt-3 min-h-48 w-full resize-y rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-xs leading-5 text-zinc-800 outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100"
-        />
-      </details>
+      {allowAdvancedJsonEditor ? (
+        <details className="group rounded-2xl border border-zinc-200 bg-white p-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-zinc-800">高级编辑：原始 JSON</div>
+              <div className="mt-0.5 text-[11px] text-zinc-500">仅在表单无法表达时使用。</div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
+          </summary>
+          <textarea
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            className="mt-3 min-h-48 w-full resize-y rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-xs leading-5 text-zinc-800 outline-none transition-colors focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100"
+          />
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -1113,6 +1563,105 @@ function FormArea({
   );
 }
 
+function ObservabilityPanel({ pipeline }: { pipeline: Pipeline | null }) {
+  if (!pipeline) return null;
+
+  const context = pipeline.context || {};
+  const obs = asRecord(context.observability);
+  const runs = asArray(obs.runs) as Record<string, unknown>[];
+  const lastUpdated = asString(obs.last_updated);
+
+  return (
+    <details className="group rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-emerald-600" />
+          <div>
+            <div className="text-sm font-semibold text-zinc-950">可观测性</div>
+            <div className="text-xs text-zinc-500">各阶段耗时与 Token</div>
+          </div>
+        </div>
+        <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
+      </summary>
+
+      <div className="mt-3 space-y-2 text-xs">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-zinc-500">
+          <span>
+            流水线状态：<span className="font-medium text-zinc-800">{pipeline.state}</span>
+          </span>
+          {lastUpdated ? (
+            <span className="break-all">
+              最近记录：<span className="font-mono text-[11px] text-zinc-700">{lastUpdated}</span>
+            </span>
+          ) : null}
+        </div>
+
+        {runs.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-3 py-2 leading-5 text-zinc-600">
+            尚无阶段运行记录。点击「开始」后，每完成一个 Agent 阶段会追加一行（刷新页面或等待轮询即可看到）。
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-zinc-200">
+            <table className="w-full min-w-[280px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-50 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  <th className="px-2 py-2">阶段</th>
+                  <th className="px-2 py-2">结果</th>
+                  <th className="px-2 py-2">耗时(s)</th>
+                  <th className="px-2 py-2">Token</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((run, index) => {
+                  const stageName = asString(run.stage_name) || asString(run.stage_id) || "—";
+                  const ok = run.ok === true;
+                  const elapsed = typeof run.elapsed_seconds === "number" ? run.elapsed_seconds : Number(run.elapsed_seconds);
+                  const tokens = asRecord(run.tokens);
+                  const total =
+                    typeof tokens.total_tokens === "number"
+                      ? tokens.total_tokens
+                      : tokens.total_tokens != null
+                        ? String(tokens.total_tokens)
+                        : "—";
+                  const src = asString(tokens.token_source);
+                  const tokenLabel =
+                    total === "—" ? "—" : `${total}${src ? ` (${src})` : ""}`;
+                  const err = asString(run.error);
+                  return (
+                    <tr key={`${asString(run.stage_id)}-${index}`} className="border-b border-zinc-100 last:border-0">
+                      <td className="px-2 py-2 font-medium text-zinc-800">{stageName}</td>
+                      <td className="px-2 py-2">
+                        {ok ? (
+                          <span className="text-emerald-700">成功</span>
+                        ) : (
+                          <span className="text-red-700" title={err || undefined}>
+                            失败
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 font-mono text-zinc-700">{Number.isFinite(elapsed) ? elapsed : "—"}</td>
+                      <td className="max-w-[140px] truncate px-2 py-2 font-mono text-[11px] text-zinc-600" title={err || undefined}>
+                        {tokenLabel}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {asString(context.last_error) ? (
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-5 text-red-900">
+            <span className="font-semibold">last_error：</span>
+            <span className="break-all font-mono">{asString(context.last_error)}</span>
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 function DeveloperDetails({ pipeline }: { pipeline: Pipeline | null }) {
   if (!pipeline) return null;
 
@@ -1208,7 +1757,7 @@ function buildHumanSummary(stageId: string, context: Record<string, unknown>, st
 
   if (stageId === "coding" || patches.length > 0) {
     return {
-      title: "AI 正在生成完整文件",
+      title: state === "RUNNING" ? "AI 正在生成完整文件" : "AI 已返回代码文件",
       description: "系统会严格检查返回格式；不合格会打回重写，不再生成占位文件。",
       items: [
         { label: "文件", value: patches.map((patch) => asString(patch.file_path)).filter(Boolean).join("、") || "等待豆包返回完整文件。" },
@@ -1231,7 +1780,7 @@ function buildHumanSummary(stageId: string, context: Record<string, unknown>, st
   return {
     title: "AI 阶段产物摘要",
     description: "阶段完成后，这里会用自然语言解释 AI 返回了什么。",
-    items: [{ label: "当前状态", value: "AI 正在生成，请稍等。" }],
+    items: [{ label: "当前状态", value: state === "RUNNING" ? "AI 正在生成，请稍等。" : "等待阶段产物。" }],
   };
 }
 
@@ -1250,11 +1799,11 @@ function buildContextPatchFromDraft(pipeline: Pipeline, draftText: string) {
   try {
     parsed = JSON.parse(draftText);
   } catch {
-    throw new Error("修改后的草稿必须是合法 JSON。请检查引号、逗号和括号。");
+    throw new Error("修改后的产物必须是合法 JSON。请检查引号、逗号和括号。");
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("修改后的草稿必须是一个 JSON 对象。");
+    throw new Error("修改后的产物必须是一个 JSON 对象。");
   }
 
   return {
@@ -1265,6 +1814,29 @@ function buildContextPatchFromDraft(pipeline: Pipeline, draftText: string) {
       edited_at: new Date().toISOString(),
     },
   };
+}
+
+function normalizeRole(value: string | null): RoleKey {
+  if (value === "product" || value === "tech" || value === "manager" || value === "first") {
+    return value;
+  }
+  return "first";
+}
+
+function getInitialConsoleTheme(value: string | null): ConsoleTheme {
+  if (value === "dark" || value === "night") return "night";
+  if (value === "light" || value === "day") return "day";
+
+  if (typeof window !== "undefined") {
+    const stored = window.localStorage.getItem(CONSOLE_THEME_STORAGE_KEY);
+    if (stored === "night" || stored === "day") return stored;
+  }
+
+  return "day";
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 function parseDraftObject(draftText: string) {

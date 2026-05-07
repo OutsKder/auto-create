@@ -1,40 +1,95 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   Mail,
+  Moon,
   ShieldCheck,
   Sparkles,
+  Sun,
 } from "lucide-react";
 import WeaveMark from "../../../components/WeaveMark";
 
+const LOGIN_THEME_STORAGE_KEY = "login-v2-theme";
+
 export default function LoginV2Geek() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isDay, setIsDay] = useState(() => {
+    try {
+      return typeof localStorage !== "undefined" && localStorage.getItem(LOGIN_THEME_STORAGE_KEY) === "day";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LOGIN_THEME_STORAGE_KEY, isDay ? "day" : "night");
+    } catch {
+      /* ignore */
+    }
+  }, [isDay]);
 
   return (
-    <div className="min-h-full bg-ink-950 text-white relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-grid-24 opacity-45" />
-      <div className="pointer-events-none absolute -top-48 left-1/2 h-[640px] w-[880px] -translate-x-1/2 rounded-full bg-weave-500/22 blur-[150px]" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-[480px] w-[560px] rounded-full bg-glow-violet/15 blur-[140px]" />
+    <div
+      className={`min-h-full relative overflow-hidden transition-colors duration-300 ${
+        isDay
+          ? "bg-gradient-to-b from-zinc-50 via-white to-zinc-100 text-zinc-900"
+          : "bg-ink-950 text-white"
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 bg-grid-24 ${
+          isDay ? "bg-grid-light opacity-70" : "bg-grid-dark opacity-45"
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute -top-48 left-1/2 h-[640px] w-[880px] -translate-x-1/2 rounded-full blur-[150px] ${
+          isDay ? "bg-weave-500/14" : "bg-weave-500/22"
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute bottom-0 right-0 h-[480px] w-[560px] rounded-full blur-[140px] ${
+          isDay ? "bg-glow-violet/10" : "bg-glow-violet/15"
+        }`}
+      />
 
       <div className="relative min-h-screen flex flex-col">
-        <header className="h-14 border-b border-white/[0.06] bg-black/25 backdrop-blur-xl">
+        <header
+          className={`h-14 border-b backdrop-blur-xl transition-colors ${
+            isDay ? "border-zinc-200/90 bg-white/80" : "border-white/[0.06] bg-black/25"
+          }`}
+        >
           <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
             <Link
-              to="/drafts/landing/v2"
-              className="inline-flex items-center gap-1.5 text-xs font-mono text-white/45 hover:text-weave-300 transition-colors"
+              to="/"
+              className={`inline-flex items-center gap-1.5 text-xs font-mono transition-colors ${
+                isDay ? "text-zinc-500 hover:text-weave-600" : "text-white/45 hover:text-weave-300"
+              }`}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              返回 Landing
+              返回官网
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDay((v) => !v)}
+                aria-label={isDay ? "切换为夜间模式" : "切换为日间模式"}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                  isDay
+                    ? "border-zinc-200 bg-white text-amber-500 shadow-sm hover:bg-zinc-50 focus-visible:ring-weave-400"
+                    : "border-white/[0.12] bg-white/[0.06] text-amber-200/90 hover:bg-white/[0.1] focus-visible:ring-weave-400/50"
+                }`}
+              >
+                {isDay ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </button>
               <div className="h-6 w-6 rounded-md bg-gradient-to-br from-weave-500 to-glow-violet flex items-center justify-center shadow-glow-sm">
                 <WeaveMark className="h-4 w-4" />
               </div>
               <span className="text-sm font-semibold tracking-tight">
-                织界 <span className="text-white/45 font-normal">Weave</span>
+                织界{" "}
+                <span className={`font-normal ${isDay ? "text-zinc-500" : "text-white/45"}`}>Weave</span>
               </span>
             </div>
           </div>
@@ -43,41 +98,46 @@ export default function LoginV2Geek() {
         <main className="flex-1 flex items-center justify-center px-6 py-12">
           <section className="w-full max-w-5xl grid lg:grid-cols-[0.9fr_1.1fr] gap-10 items-center">
             <div className="hidden lg:block">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[11px] font-medium tracking-wider uppercase text-white/50 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-weave-300" />
+              <div
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-medium tracking-wider uppercase backdrop-blur ${
+                  isDay
+                    ? "border-zinc-200 bg-white/90 text-zinc-500 shadow-sm"
+                    : "border-white/[0.08] bg-white/[0.04] text-white/50"
+                }`}
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${isDay ? "text-weave-600" : "text-weave-300"}`} />
                 Secure workspace
               </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight leading-tight">
+              <h1 className={`mt-5 text-4xl font-semibold tracking-tight leading-tight ${isDay ? "text-zinc-900" : ""}`}>
                 进入你的
-                <span className="block bg-gradient-to-r from-weave-300 via-weave-400 to-glow-violet bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-weave-500 via-weave-600 to-glow-violet bg-clip-text text-transparent">
                   AI 交付工作台。
                 </span>
               </h1>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-white/55">
+              <p className={`mt-4 max-w-md text-sm leading-relaxed ${isDay ? "text-zinc-600" : "text-white/55"}`}>
                 登录后，我们会先询问你的使用身份，再为你配置合适的信息深度和引导方式。
               </p>
-
-              <div className="mt-8 space-y-3">
-                {[
-                  "身份选择只影响引导方式，不改变底层流程",
-                  "演示版支持一键进入，不需要真实账号",
-                  "后续可无缝接入真实认证与用户配置",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-2 text-sm text-white/55">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-weave-300 flex-none" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="relative">
-              <div className="absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-weave-500/20 via-transparent to-glow-violet/20 blur-3xl" />
-              <div className="relative mx-auto max-w-md rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.025] p-6 md:p-7 backdrop-blur-xl shadow-apple-modal">
+              <div
+                className={`absolute -inset-8 rounded-[2rem] blur-3xl ${
+                  isDay
+                    ? "bg-gradient-to-br from-weave-500/12 via-transparent to-glow-violet/12"
+                    : "bg-gradient-to-br from-weave-500/20 via-transparent to-glow-violet/20"
+                }`}
+              />
+              <div
+                className={`relative mx-auto max-w-md rounded-[2rem] border p-6 md:p-7 backdrop-blur-xl transition-colors ${
+                  isDay
+                    ? "border-zinc-200/90 bg-white/95 shadow-xl ring-1 ring-zinc-900/[0.04]"
+                    : "border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.025] shadow-apple-modal"
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-white/40">Welcome back</div>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                    <div className={`text-xs ${isDay ? "text-zinc-500" : "text-white/40"}`}>Welcome back</div>
+                    <h2 className={`mt-1 text-2xl font-semibold tracking-tight ${isDay ? "text-zinc-900" : ""}`}>
                       登录织界
                     </h2>
                   </div>
@@ -85,7 +145,11 @@ export default function LoginV2Geek() {
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
                     aria-label={showPassword ? "隐藏密码" : "显示密码"}
-                    className="h-11 w-11 rounded-2xl border border-white/[0.08] bg-white/[0.04] flex items-center justify-center text-weave-300 hover:bg-white/[0.07] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-weave-400/40"
+                    className={`h-11 w-11 rounded-2xl border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-weave-400/40 ${
+                      isDay
+                        ? "border-zinc-200 bg-zinc-50 text-weave-600 hover:bg-zinc-100"
+                        : "border-white/[0.08] bg-white/[0.04] text-weave-300 hover:bg-white/[0.07] hover:text-white"
+                    }`}
                   >
                     <MoonPhaseIcon visible={showPassword} />
                   </button>
@@ -93,36 +157,56 @@ export default function LoginV2Geek() {
 
                 <div className="mt-7 space-y-4">
                   <label className="block">
-                    <span className="text-xs font-medium text-white/50">
-                      邮箱
-                    </span>
-                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 h-11 focus-within:border-weave-400/50 focus-within:ring-4 focus-within:ring-weave-500/10 transition-all">
-                      <Mail className="h-4 w-4 text-white/35" />
+                    <span className={`text-xs font-medium ${isDay ? "text-zinc-600" : "text-white/50"}`}>邮箱</span>
+                    <div
+                      className={`mt-2 flex items-center gap-2 rounded-xl border px-3 h-11 transition-all ${
+                        isDay
+                          ? "border-zinc-200 bg-zinc-50 focus-within:border-weave-400 focus-within:ring-4 focus-within:ring-weave-500/15"
+                          : "border-white/[0.08] bg-black/30 focus-within:border-weave-400/50 focus-within:ring-4 focus-within:ring-weave-500/10"
+                      }`}
+                    >
+                      <Mail className={`h-4 w-4 ${isDay ? "text-zinc-400" : "text-white/35"}`} />
                       <input
                         defaultValue="demo@weave.ai"
-                        className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                        className={`w-full bg-transparent text-sm outline-none ${
+                          isDay
+                            ? "text-zinc-900 placeholder:text-zinc-400"
+                            : "text-white placeholder:text-white/25"
+                        }`}
                         placeholder="you@example.com"
                       />
                     </div>
                   </label>
 
                   <label className="block">
-                    <span className="text-xs font-medium text-white/50">
-                      密码
-                    </span>
-                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 h-11 focus-within:border-weave-400/50 focus-within:ring-4 focus-within:ring-weave-500/10 transition-all">
-                      <ShieldCheck className="h-4 w-4 text-white/35" />
+                    <span className={`text-xs font-medium ${isDay ? "text-zinc-600" : "text-white/50"}`}>密码</span>
+                    <div
+                      className={`mt-2 flex items-center gap-2 rounded-xl border px-3 h-11 transition-all ${
+                        isDay
+                          ? "border-zinc-200 bg-zinc-50 focus-within:border-weave-400 focus-within:ring-4 focus-within:ring-weave-500/15"
+                          : "border-white/[0.08] bg-black/30 focus-within:border-weave-400/50 focus-within:ring-4 focus-within:ring-weave-500/10"
+                      }`}
+                    >
+                      <ShieldCheck className={`h-4 w-4 ${isDay ? "text-zinc-400" : "text-white/35"}`} />
                       <input
                         type={showPassword ? "text" : "password"}
                         defaultValue="weave-demo"
-                        className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                        className={`w-full bg-transparent text-sm outline-none ${
+                          isDay
+                            ? "text-zinc-900 placeholder:text-zinc-400"
+                            : "text-white placeholder:text-white/25"
+                        }`}
                         placeholder="password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((current) => !current)}
                         aria-label={showPassword ? "隐藏密码" : "显示密码"}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-white/35 transition-colors hover:bg-white/[0.06] hover:text-weave-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-weave-400/40"
+                        className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-weave-400/40 ${
+                          isDay
+                            ? "text-zinc-400 hover:bg-zinc-200/80 hover:text-weave-600"
+                            : "text-white/35 hover:bg-white/[0.06] hover:text-weave-300"
+                        }`}
                       >
                         <MoonPhaseIcon visible={showPassword} compact />
                       </button>
@@ -141,18 +225,25 @@ export default function LoginV2Geek() {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <Link
                     to="/drafts/onboarding/v2"
-                    className="inline-flex items-center justify-center h-10 rounded-lg border border-white/[0.08] bg-white/[0.035] text-sm text-white/65 hover:bg-white/[0.07] hover:text-white transition-colors"
+                    className={`inline-flex items-center justify-center h-10 rounded-lg border text-sm transition-colors ${
+                      isDay
+                        ? "border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50"
+                        : "border-white/[0.08] bg-white/[0.035] text-white/65 hover:bg-white/[0.07] hover:text-white"
+                    }`}
                   >
                     一键体验
                   </Link>
-                  <button className="inline-flex items-center justify-center h-10 rounded-lg border border-white/[0.08] bg-white/[0.02] text-sm text-white/45 hover:bg-white/[0.05] hover:text-white/70 transition-colors">
-                    忘记密码
-                  </button>
+                  <Link
+                    to="/drafts/onboarding/v2"
+                    className={`inline-flex items-center justify-center h-10 rounded-lg border text-sm transition-colors ${
+                      isDay
+                        ? "border-zinc-200 bg-zinc-50/80 text-zinc-600 hover:bg-zinc-100"
+                        : "border-white/[0.08] bg-white/[0.02] text-white/45 hover:bg-white/[0.05] hover:text-white/70"
+                    }`}
+                  >
+                    选择身份
+                  </Link>
                 </div>
-
-                <p className="mt-5 text-center text-[11px] leading-relaxed text-white/32">
-                  当前为前端演示登录。真实版本会在这里接入团队账号、SSO 或 OAuth。
-                </p>
               </div>
             </div>
           </section>

@@ -1,0 +1,35 @@
+Frontend Environment Requirements
+
+Project path:
+formal-create/main-site
+
+Runtime:
+Node.js >= 20
+npm >= 10
+
+Core stack:
+React 19
+TypeScript 6
+Vite 8
+Tailwind CSS 3
+React Router 7
+Zustand 5
+lucide-react
+
+Install:
+cd formal-create/main-site
+npm install
+
+Start development server:
+npm run dev
+
+Build:
+npm run build
+
+Local environment variables:
+VITE_PIPELINE_API_BASE_URL=/api-pipeline
+VITE_PIPELINE_DEMO_MODE=false
+
+Notes:
+The Vite dev server proxies /api-pipeline to http://127.0.0.1:8008.
+To run the frontend with mock data only, leave VITE_PIPELINE_API_BASE_URL empty.

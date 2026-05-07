@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import os
+import base64
+import re
 import sys
+import zipfile
 from copy import deepcopy
 from datetime import datetime
 from http import HTTPStatus
@@ -28,8 +32,57 @@ from backend.api_first.service import (
 )
 
 DEFAULT_PORT = 8008
+DEFAULT_HOST = "127.0.0.1"
 LOG_DIR = PROJECT_ROOT / "backend" / "logs"
+IMPORTED_PROJECTS_ROOT = PROJECT_ROOT / "projects" / "_imports"
 LOGGER = logging.getLogger(__name__)
+
+
+def _safe_key(value: str, fallback: str = "imported-project") -> str:
+    key = re.sub(r"[^\w\u4e00-\u9fff.-]+", "-", value.strip(), flags=re.UNICODE).strip(".-")
+    return key[:80] or fallback
+
+
+def _extract_project_zip(filename: str, content_base64: str) -> Dict[str, Any]:
+    raw_base64 = content_base64.split(",", 1)[-1]
+    archive_bytes = base64.b64decode(raw_base64)
+    project_key = _safe_key(Path(filename or "uploaded-project.zip").stem)
+    import_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    import_dir = IMPORTED_PROJECTS_ROOT / project_key / import_id
+    source_dir = import_dir / "source"
+    import_dir.mkdir(parents=True, exist_ok=True)
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_path = import_dir / (_safe_key(filename, "uploaded-project.zip"))
+    zip_path.write_bytes(archive_bytes)
+
+    with zipfile.ZipFile(zip_path) as archive:
+        for member in archive.infolist():
+            member_path = source_dir / member.filename
+            if not str(member_path.resolve()).startswith(str(source_dir.resolve())):
+                raise ValueError(f"zip contains unsafe path: {member.filename}")
+        archive.extractall(source_dir)
+
+    files: list[str] = []
+    for root, dirs, names in os.walk(source_dir):
+        dirs[:] = [item for item in dirs if item not in {"node_modules", ".git", "__pycache__", "venv", ".venv"}]
+        for name in names:
+            rel_path = Path(root, name).relative_to(source_dir).as_posix()
+            files.append(rel_path)
+            if len(files) >= 80:
+                break
+        if len(files) >= 80:
+            break
+
+    return {
+        "project_key": project_key,
+        "import_id": import_id,
+        "filename": filename,
+        "repo_path": str(source_dir),
+        "zip_file": str(zip_path),
+        "file_count": sum(len(names) for _, _, names in os.walk(source_dir)),
+        "sample_files": files[:20],
+    }
 
 
 def configure_logging() -> Path:
@@ -84,6 +137,7 @@ def _pipeline_to_dict(pipeline: Pipeline) -> Dict[str, Any]:
     return {
         "id": pipeline.id,
         "status": pipeline.status.value,
+        "current_stage_index": pipeline.current_stage_index,
         "current_stage": {
             "id": current_stage.id,
             "name": current_stage.name,
@@ -276,6 +330,28 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
                 self._send_json(_pipeline_to_dict(pipeline), status=HTTPStatus.CREATED)
                 return
 
+            if parts == ["projects", "import"]:
+                payload = self._read_json()
+                filename = str(payload.get("filename") or "uploaded-project.zip")
+                content_base64 = str(payload.get("content_base64") or "")
+                if not content_base64:
+                    self._send_json({"detail": "content_base64 is required"}, status=HTTPStatus.BAD_REQUEST)
+                    return
+                if not filename.lower().endswith(".zip"):
+                    self._send_json({"detail": "only .zip project archives are supported"}, status=HTTPStatus.BAD_REQUEST)
+                    return
+
+                imported = _extract_project_zip(filename, content_base64)
+                LOGGER.info(
+                    "project.import key=%s import_id=%s files=%s repo=%s",
+                    imported["project_key"],
+                    imported["import_id"],
+                    imported["file_count"],
+                    imported["repo_path"],
+                )
+                self._send_json(imported, status=HTTPStatus.CREATED)
+                return
+
             if len(parts) == 3 and parts[0] == "pipelines" and parts[2] == "run":
                 pipeline = run_pipeline(parts[1])
                 self._send_json(_pipeline_to_dict(pipeline))
@@ -310,13 +386,13 @@ class PipelineHTTPDemoHandler(BaseHTTPRequestHandler):
         LOGGER.info("HTTP %s - %s", self.address_string(), format % args)
 
 
-def main(port: int = DEFAULT_PORT) -> None:
+def main(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
     log_file = configure_logging()
-    server = ThreadingHTTPServer(("127.0.0.1", port), PipelineHTTPDemoHandler)
-    print(f"API first demo server listening on http://127.0.0.1:{port}")
+    server = ThreadingHTTPServer((host, port), PipelineHTTPDemoHandler)
+    print(f"API first demo server listening on http://{host}:{port}")
     print(f"Log file: {log_file}")
     print("Endpoints: POST /pipelines, POST /pipelines/{id}/run, POST /checkpoints/{id}/approve, POST /checkpoints/{id}/reject")
-    LOGGER.info("API first demo server listening on http://127.0.0.1:%s", port)
+    LOGGER.info("API first demo server listening on http://%s:%s", host, port)
     LOGGER.info("Log file: %s", log_file)
     try:
         server.serve_forever()
@@ -329,4 +405,6 @@ def main(port: int = DEFAULT_PORT) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    host = os.getenv("API_DEMO_HOST", DEFAULT_HOST)
+    port = int(os.getenv("API_DEMO_PORT", str(DEFAULT_PORT)))
+    main(host=host, port=port)

@@ -1,0 +1,42 @@
+{
+  "project_mode": "new",
+  "project_source": "scratch",
+  "requirement_raw": "生成一个绚丽美观的网页，上面只有六个字“南京邮电大学”。",
+  "requirement_structured": {
+    "is_clear": false,
+    "clarifying_questions": [
+      "服务连接异常，无法处理当前请求，请稍后重试或重新描述您的需求"
+    ],
+    "goal": "请求处理失败，无法识别用户原始需求",
+    "features": [],
+    "constraints": [],
+    "acceptance_criteria": [],
+    "assumptions": [],
+    "out_of_scope": []
+  },
+  "meta_trace": {
+    "retry_meta": {
+      "elapsed_seconds": 19.87,
+      "total_tokens": 2834,
+      "prompt_tokens": 2470,
+      "completion_tokens": 364,
+      "token_source": "estimate",
+      "prompts_snapshot": [
+        [
+          "你是一个严格的JSON纠错助手。请修复以下输出，使其完全符合给定的JSON Schema。不要输出任何多余内容，只需输出合法的JSON。",
+          "【原始预期格式】:\nThe output should be formatted as a JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{\"additionalProperties\": false, \"properties\": {\"is_clear\": {\"default\": true, \"title\": \"Is Clear\", \"type\": \"boolean\"}, \"clarifying_questions\": {\"items\": {\"type\": \"string\"}, \"title\": \"Clarifying Questions\", \"type\": \"array\"}, \"goal\": {\"title\": \"Goal\", \"type\": \"string\"}, \"features\": {\"items\": {\"type\": \"string\"}, \"title\": \"Features\", \"type\": \"array\"}, \"constraints\": {\"items\": {\"type\": \"string\"}, \"title\": \"Constraints\", \"type\": \"array\"}, \"acceptance_criteria\": {\"items\": {\"type\": \"string\"}, \"title\": \"Acceptance Criteria\", \"type\": \"array\"}, \"assumptions\": {\"items\": {\"type\": \"string\"}, \"title\": \"Assumptions\", \"type\": \"array\"}, \"out_of_scope\": {\"items\": {\"type\": \"string\"}, \"title\": \"Out Of Scope\", \"type\": \"array\"}}, \"required\": [\"goal\"]}\n```\n\n【错误的输出】:\n请求失败: peer closed connection without sending complete message body (incomplete chunked read)\n\n【错误信息】:\nInvalid json output: 请求失败: peer closed connection without sending complete message body (incomplete chunked read)\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE \n\n请直接输出修复后的JSON:"
+        ]
+      ],
+      "completion_snapshot": "{\n    \"is_clear\": false,\n    \"clarifying_questions\": [\"服务连接异常，无法处理当前请求，请稍后重试或重新描述您的需求\"],\n    \"goal\": \"请求处理失败，无法识别用户原始需求\",\n    \"features\": [],\n    \"constraints\": [],\n    \"acceptance_criteria\": [],\n    \"assumptions\": [],\n    \"out_of_scope\": []\n}"
+    }
+  },
+  "artifact_dir": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\07af9f85-3494-4ea5-a7ff-ac843c6d3852",
+  "stage_artifacts": {
+    "analysis": {
+      "root": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\07af9f85-3494-4ea5-a7ff-ac843c6d3852",
+      "stage_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\07af9f85-3494-4ea5-a7ff-ac843c6d3852\\stages\\01-analysis.json",
+      "context_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\07af9f85-3494-4ea5-a7ff-ac843c6d3852\\context.json",
+      "summary_file": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\generated-projects\\07af9f85-3494-4ea5-a7ff-ac843c6d3852\\README.md"
+    }
+  }
+}

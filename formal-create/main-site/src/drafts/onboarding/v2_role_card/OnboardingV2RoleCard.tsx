@@ -116,11 +116,11 @@ export default function OnboardingV2RoleCard() {
         <header className="h-14 border-b border-white/[0.06] bg-black/25 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
             <Link
-              to="/drafts/landing/v2"
+              to="/drafts/login/v2"
               className="inline-flex items-center gap-1.5 text-xs font-mono text-white/45 hover:text-weave-300 transition-colors"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              返回 Landing
+              返回登录
             </Link>
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-md bg-gradient-to-br from-weave-500 to-glow-violet flex items-center justify-center shadow-glow-sm">
@@ -141,10 +141,10 @@ export default function OnboardingV2RoleCard() {
                 Role-aware onboarding
               </div>
               <h1 className="mt-3 text-3xl md:text-4xl font-semibold tracking-tight">
-                选择你的工作台身份牌。
+                选择你的工作台身份牌
               </h1>
               <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-white/48">
-                底层流程不变，只改变默认引导和信息深度。
+                适配专属的引导和信息深度
               </p>
             </div>
 
@@ -268,7 +268,7 @@ export default function OnboardingV2RoleCard() {
                       </div>
                     </div>
                     <Link
-                      to={`/drafts/console/v2?role=${selectedRole}`}
+                      to={`/drafts/console/v5?role=${selectedRole}&theme=dark`}
                       className="btn-glow h-11 px-5 whitespace-nowrap"
                     >
                       进入我的工作台

@@ -1,0 +1,15 @@
+{
+  "path": "manifest.json",
+  "language": "json",
+  "purpose": "Module about manifest",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "manifest",
+    "json"
+  ],
+  "depends_on": [],
+  "size_bytes": 444,
+  "importance_score": 0.0,
+  "generated_at": "2026-05-06T14:06:51.930745+00:00"
+}

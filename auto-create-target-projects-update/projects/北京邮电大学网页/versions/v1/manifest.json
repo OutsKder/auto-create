@@ -1,0 +1,15 @@
+{
+  "pipeline_id": "608a2dd2-5ae6-488e-a37e-481638f14f40",
+  "project_title": "北京邮电大学网页",
+  "project_key": "北京邮电大学网页",
+  "version": "v1",
+  "created_at": "2026-05-06T14:10:29.986413+00:00",
+  "requirement": "上面的字改成六个字“北京邮电大学”。",
+  "entry_file": "workspace/index.html",
+  "files": [
+    {
+      "path": "index.html",
+      "size": 1469
+    }
+  ]
+}

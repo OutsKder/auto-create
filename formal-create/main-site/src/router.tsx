@@ -16,6 +16,10 @@ import OnboardingV2RoleCard from "./drafts/onboarding/v2_role_card/OnboardingV2R
 export const router = createBrowserRouter([
   {
     path: "/",
+    element: <LandingV5SequenceStory />,
+  },
+  {
+    path: "/drafts",
     element: <DraftGallery />,
   },
   {
@@ -80,6 +84,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <DraftGallery />,
+    element: <LandingV5SequenceStory />,
   },
 ]);

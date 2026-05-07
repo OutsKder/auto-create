@@ -1,0 +1,33 @@
+{
+  "dir": ".",
+  "dir_name": "repo root",
+  "purpose": "Repository root index",
+  "key_files": [
+    "acceptance-report.json",
+    "manifest.json",
+    "README.md"
+  ],
+  "exports": [],
+  "depends_on": [
+    "workspace"
+  ],
+  "keywords": [
+    "acceptance report",
+    "static webpage",
+    "test validation",
+    "text replacement",
+    "南京邮电大学",
+    "北京邮电大学",
+    "project pipeline",
+    "HTML generation",
+    "manifest",
+    "json",
+    "readme",
+    "md",
+    "南京邮电大学网页",
+    "How to open"
+  ],
+  "file_count": 3,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-06T14:07:37.668376+00:00"
+}

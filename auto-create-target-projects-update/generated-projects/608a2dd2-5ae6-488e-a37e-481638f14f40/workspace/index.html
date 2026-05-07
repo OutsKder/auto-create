@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北京邮电大学</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: clamp(2.5rem, 10vw, 6rem);
+            font-weight: 800;
+            background: linear-gradient(90deg, #ffffff, #f0f0f0, #ffffff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientFlow 3s linear infinite;
+            transition: transform 0.3s ease;
+            text-align: center;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        h1:hover {
+            transform: scale(1.05);
+        }
+        @keyframes gradientFlow {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+    </style>
+</head>
+<body>
+    <h1>北京邮电大学</h1>
+</body>
+</html>

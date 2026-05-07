@@ -4,6 +4,8 @@ import asyncio
 import logging
 import os
 import sys
+import time
+from datetime import datetime, timezone
 from inspect import isawaitable
 from typing import Any, Callable, Dict
 from pathlib import Path
@@ -17,6 +19,45 @@ from ..artifact_store import (
 from ..pipeline import Pipeline, PipelineStatus
 
 logger = logging.getLogger(__name__)
+
+OBSERVABILITY_KEY = "observability"
+
+
+def _append_stage_observability(
+    pipeline: Pipeline,
+    *,
+    stage_id: str,
+    stage_name: str,
+    started_monotonic: float,
+    ok: bool,
+    error: str | None = None,
+) -> None:
+    """Append one run record for simple dashboards (duration, tokens when present)."""
+    elapsed = max(0.0, time.monotonic() - started_monotonic)
+    bucket = pipeline.context.setdefault(OBSERVABILITY_KEY, {})
+    runs = bucket.setdefault("runs", [])
+    meta = pipeline.context.get("meta_trace")
+    tokens: Dict[str, Any] | None = None
+    if isinstance(meta, dict):
+        tokens = {
+            "total_tokens": meta.get("total_tokens"),
+            "prompt_tokens": meta.get("prompt_tokens"),
+            "completion_tokens": meta.get("completion_tokens"),
+            "token_source": meta.get("token_source"),
+        }
+    runs.append(
+        {
+            "stage_id": stage_id,
+            "stage_name": stage_name,
+            "ok": ok,
+            "elapsed_seconds": round(elapsed, 3),
+            "ended_at": datetime.now(timezone.utc).isoformat(),
+            "tokens": tokens,
+            "error": error,
+        }
+    )
+    bucket["last_updated"] = datetime.now(timezone.utc).isoformat()
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
@@ -131,6 +172,10 @@ async def _execute_tech_architect(pipeline: Pipeline) -> bool:
     result = await _run_agent_execute(agent, input_context)
     if isinstance(result, dict) and "design" in result:
         pipeline.context["design_doc"] = result["design"]
+        if "meta_trace" in result:
+            pipeline.context["meta_trace"] = result["meta_trace"]
+        if "codebase_context" in result:
+            pipeline.context["codebase_context"] = result["codebase_context"]
         return True
     if result is not None:
         pipeline.context["design_doc"] = result
@@ -139,6 +184,7 @@ async def _execute_tech_architect(pipeline: Pipeline) -> bool:
 
 
 async def _execute_code_generator(pipeline: Pipeline) -> bool:
+    pipeline.context.pop("meta_trace", None)
     if _is_demo_mode(pipeline):
         pipeline.context["code_diff"] = {
             "changes": [
@@ -190,6 +236,7 @@ async def _execute_code_generator(pipeline: Pipeline) -> bool:
 
 
 async def _execute_testing(pipeline: Pipeline) -> bool:
+    pipeline.context.pop("meta_trace", None)
     if _is_demo_mode(pipeline):
         pipeline.context["test_report"] = {
             "passed": True,
@@ -238,6 +285,7 @@ async def _execute_testing(pipeline: Pipeline) -> bool:
 
 
 async def _execute_review(pipeline: Pipeline) -> bool:
+    pipeline.context.pop("meta_trace", None)
     if _is_demo_mode(pipeline):
         pipeline.context["review_result"] = {
             "approved": True,
@@ -261,6 +309,7 @@ async def _execute_review(pipeline: Pipeline) -> bool:
 
 
 def _execute_delivery(pipeline: Pipeline) -> bool:
+    pipeline.context.pop("meta_trace", None)
     if _is_demo_mode(pipeline):
         pipeline.context["delivery"] = {
             "status": "ready",
@@ -295,6 +344,7 @@ async def dispatch_stage(pipeline: Pipeline):
         return
 
     logger.info("==> Dispatching stage: %s", stage.id)
+    started = time.monotonic()
 
     try:
         executor = _STAGE_EXECUTORS.get(stage.id)
@@ -307,13 +357,37 @@ async def dispatch_stage(pipeline: Pipeline):
             success = await success
         if not success:
             logger.warning("Stage %s connector returned false or empty result.", stage.id)
+            _append_stage_observability(
+                pipeline,
+                stage_id=stage.id,
+                stage_name=stage.name,
+                started_monotonic=started,
+                ok=False,
+                error="阶段未返回有效结果",
+            )
             return
 
         persist_stage_artifacts(pipeline, stage)
+        _append_stage_observability(
+            pipeline,
+            stage_id=stage.id,
+            stage_name=stage.name,
+            started_monotonic=started,
+            ok=True,
+            error=None,
+        )
         pipeline.stage_done()
         logger.info("==> Stage %s done. Waiting for approval.", stage.id)
     except Exception as e:
         pipeline.context["last_error"] = f"{stage.id}: {e}"
+        _append_stage_observability(
+            pipeline,
+            stage_id=stage.id,
+            stage_name=stage.name,
+            started_monotonic=started,
+            ok=False,
+            error=str(e),
+        )
         logger.exception("Error executing stage %s", stage.id)
 
 

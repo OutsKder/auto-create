@@ -1,0 +1,173 @@
+{
+  "repo_path": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260506-220534\\source",
+  "index_root": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260506-220534\\source\\summary",
+  "generated_at": "2026-05-06T14:07:37.669955+00:00",
+  "dir_count": 3,
+  "file_count": 4,
+  "dirs": {
+    "": {
+      "dir": "",
+      "dir_name": "",
+      "purpose": "Container for 1 subdirectories",
+      "key_files": [],
+      "exports": [],
+      "depends_on": [],
+      "keywords": [],
+      "file_count": 0,
+      "child_dir_count": 1,
+      "generated_at": "2026-05-06T14:07:37.667107+00:00"
+    },
+    ".": {
+      "dir": ".",
+      "dir_name": "repo root",
+      "purpose": "Repository root index",
+      "key_files": [
+        "acceptance-report.json",
+        "manifest.json",
+        "README.md"
+      ],
+      "exports": [],
+      "depends_on": [
+        "workspace"
+      ],
+      "keywords": [
+        "acceptance report",
+        "static webpage",
+        "test validation",
+        "text replacement",
+        "南京邮电大学",
+        "北京邮电大学",
+        "project pipeline",
+        "HTML generation",
+        "manifest",
+        "json",
+        "readme",
+        "md",
+        "南京邮电大学网页",
+        "How to open"
+      ],
+      "file_count": 3,
+      "child_dir_count": 0,
+      "generated_at": "2026-05-06T14:07:37.668376+00:00"
+    },
+    "workspace": {
+      "dir": "workspace",
+      "dir_name": "workspace",
+      "purpose": "Folder centered on title tag",
+      "key_files": [
+        "workspace/index.html"
+      ],
+      "exports": [],
+      "depends_on": [],
+      "keywords": [
+        "HTML",
+        "CSS animation",
+        "gradient background",
+        "text gradient",
+        "responsive text",
+        "single page web",
+        "university display"
+      ],
+      "file_count": 1,
+      "child_dir_count": 0,
+      "generated_at": "2026-05-06T14:07:37.669427+00:00"
+    }
+  },
+  "files": {
+    "acceptance-report.json": {
+      "path": "acceptance-report.json",
+      "language": "json",
+      "purpose": "Stores acceptance test results and metadata for the generated Nanjing University of Posts and Telecommunications static webpage project, used to confirm whether the generated webpage meets initial requirements; the current task is to replace all '南京邮电大学' text in relevant files to '北京邮电大学' as requested",
+      "main_symbols": [
+        "pipeline_id",
+        "project_title",
+        "project_key",
+        "version",
+        "generated_at",
+        "requirement",
+        "test_passed",
+        "checks"
+      ],
+      "exports": [],
+      "keywords": [
+        "acceptance report",
+        "static webpage",
+        "test validation",
+        "text replacement",
+        "南京邮电大学",
+        "北京邮电大学",
+        "project pipeline",
+        "HTML generation"
+      ],
+      "depends_on": [
+        "workspace/index.html"
+      ],
+      "size_bytes": 1138,
+      "importance_score": 12.15,
+      "generated_at": "2026-05-06T14:07:37.665495+00:00",
+      "summary_mode": "llm"
+    },
+    "manifest.json": {
+      "path": "manifest.json",
+      "language": "json",
+      "purpose": "Module about manifest",
+      "main_symbols": [],
+      "exports": [],
+      "keywords": [
+        "manifest",
+        "json"
+      ],
+      "depends_on": [],
+      "size_bytes": 444,
+      "importance_score": 0.0,
+      "generated_at": "2026-05-06T14:06:51.930745+00:00"
+    },
+    "README.md": {
+      "path": "README.md",
+      "language": "markdown",
+      "purpose": "README.md documentation: 南京邮电大学网页",
+      "main_symbols": [],
+      "exports": [],
+      "keywords": [
+        "readme",
+        "md",
+        "南京邮电大学网页",
+        "How to open"
+      ],
+      "depends_on": [],
+      "size_bytes": 342,
+      "importance_score": 0.0,
+      "generated_at": "2026-05-06T14:06:51.932756+00:00"
+    },
+    "workspace/index.html": {
+      "path": "workspace/index.html",
+      "language": "html",
+      "purpose": "Static decorative single web page that displays a university name with animated gradient background and glowing text effect, requiring replacement of all original '南京邮电大学' text content with '北京邮电大学' as per user requirement",
+      "main_symbols": [
+        "title tag",
+        "h1 tag",
+        "bgFlow keyframe animation",
+        "textShine keyframe animation",
+        "enterAnim keyframe animation"
+      ],
+      "exports": [],
+      "keywords": [
+        "HTML",
+        "CSS animation",
+        "gradient background",
+        "text gradient",
+        "responsive text",
+        "single page web",
+        "university display"
+      ],
+      "depends_on": [],
+      "size_bytes": 2013,
+      "importance_score": 7.5,
+      "generated_at": "2026-05-06T14:07:12.611887+00:00",
+      "summary_mode": "llm"
+    }
+  },
+  "summary_mode": "llm_enriched",
+  "enriched_files": 2,
+  "candidate_files": 2
+}
