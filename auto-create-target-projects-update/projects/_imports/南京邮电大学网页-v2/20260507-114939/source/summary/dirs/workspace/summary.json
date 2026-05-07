@@ -1,0 +1,22 @@
+{
+  "dir": "workspace",
+  "dir_name": "workspace",
+  "purpose": "Folder centered on title标签",
+  "key_files": [
+    "workspace/index.html"
+  ],
+  "exports": [],
+  "depends_on": [],
+  "keywords": [
+    "静态HTML",
+    "CSS动效",
+    "渐变背景",
+    "响应式文字",
+    "南京邮电大学",
+    "北京邮电大学",
+    "文本替换"
+  ],
+  "file_count": 1,
+  "child_dir_count": 0,
+  "generated_at": "2026-05-07T03:54:04.996796+00:00"
+}

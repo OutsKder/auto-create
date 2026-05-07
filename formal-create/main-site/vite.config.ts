@@ -5,6 +5,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
+    // 内网穿透（如 SakuraFrp / frp-cat.com）时浏览器 Host 非 localhost，需显式放行
+    allowedHosts: ["frp-cat.com", ".frp-cat.com"],
     proxy: {
       "/api-pipeline": {
         target: "http://127.0.0.1:8008",

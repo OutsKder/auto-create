@@ -1,0 +1,16 @@
+{
+  "path": "acceptance-report.json",
+  "language": "json",
+  "purpose": "Module about acceptance",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "acceptance",
+    "report",
+    "json"
+  ],
+  "depends_on": [],
+  "size_bytes": 1138,
+  "importance_score": 0.0,
+  "generated_at": "2026-05-07T03:53:05.819883+00:00"
+}

@@ -214,7 +214,7 @@ export default function LandingV5SequenceStory() {
               <h1 className="mt-6 text-5xl font-semibold leading-[0.96] tracking-tighter md:text-7xl">
                 把一句需求，
                 <span className="block bg-gradient-to-r from-weave-200 via-glow-violet to-glow-pink bg-clip-text text-transparent">
-                  变成可审批的交付流。
+                  变成可审批的交付流
                 </span>
               </h1>
 
@@ -547,7 +547,7 @@ function RoleSection({ isNight }: { isNight: boolean }) {
               同一条流水线，四种读法。
             </h2>
             <p className={`mt-4 text-sm leading-7 ${isNight ? "text-white/50" : "text-ink-600"}`}>
-              角色不会改变后端接口，也不会生成四个控制台。它只改变默认展开内容、文案密度和审批关注点。
+              为不同的用户角色定制专属的生产线
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

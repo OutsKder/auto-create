@@ -1,0 +1,176 @@
+{
+  "repo_path": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260507-114939\\source",
+  "index_root": "C:\\Users\\mechrevo\\OneDrive\\Desktop\\byte\\auto-create-target-projects-update\\projects\\_imports\\南京邮电大学网页-v2\\20260507-114939\\source\\summary",
+  "generated_at": "2026-05-07T03:54:04.997323+00:00",
+  "dir_count": 3,
+  "file_count": 4,
+  "dirs": {
+    "": {
+      "dir": "",
+      "dir_name": "",
+      "purpose": "Container for 1 subdirectories",
+      "key_files": [],
+      "exports": [],
+      "depends_on": [],
+      "keywords": [],
+      "file_count": 0,
+      "child_dir_count": 1,
+      "generated_at": "2026-05-07T03:54:04.995733+00:00"
+    },
+    ".": {
+      "dir": ".",
+      "dir_name": "repo root",
+      "purpose": "Repository root index",
+      "key_files": [
+        "acceptance-report.json",
+        "manifest.json",
+        "README.md"
+      ],
+      "exports": [],
+      "depends_on": [
+        "workspace"
+      ],
+      "keywords": [
+        "acceptance report",
+        "南京邮电大学",
+        "北京邮电大学",
+        "web page generation",
+        "test verification",
+        "pipeline metadata",
+        "content replacement",
+        "v2",
+        "manifest",
+        "json",
+        "readme",
+        "md",
+        "南京邮电大学网页",
+        "How to open"
+      ],
+      "file_count": 3,
+      "child_dir_count": 0,
+      "generated_at": "2026-05-07T03:54:04.996265+00:00"
+    },
+    "workspace": {
+      "dir": "workspace",
+      "dir_name": "workspace",
+      "purpose": "Folder centered on title标签",
+      "key_files": [
+        "workspace/index.html"
+      ],
+      "exports": [],
+      "depends_on": [],
+      "keywords": [
+        "静态HTML",
+        "CSS动效",
+        "渐变背景",
+        "响应式文字",
+        "南京邮电大学",
+        "北京邮电大学",
+        "文本替换"
+      ],
+      "file_count": 1,
+      "child_dir_count": 0,
+      "generated_at": "2026-05-07T03:54:04.996796+00:00"
+    }
+  },
+  "files": {
+    "acceptance-report.json": {
+      "path": "acceptance-report.json",
+      "language": "json",
+      "purpose": "Stores acceptance test results and metadata for the Nanjing University of Posts and Telecommunications web page v2 generation pipeline, verifying that the generated web page meets the predefined requirements",
+      "main_symbols": [
+        "pipeline_id",
+        "project_title",
+        "project_key",
+        "version",
+        "generated_at",
+        "requirement",
+        "test_passed",
+        "checks",
+        "name",
+        "passed",
+        "detail"
+      ],
+      "exports": [],
+      "keywords": [
+        "acceptance report",
+        "南京邮电大学",
+        "北京邮电大学",
+        "web page generation",
+        "test verification",
+        "pipeline metadata",
+        "content replacement",
+        "v2"
+      ],
+      "depends_on": [
+        "workspace/index.html"
+      ],
+      "size_bytes": 1138,
+      "importance_score": 16.65,
+      "generated_at": "2026-05-07T03:54:04.995205+00:00",
+      "summary_mode": "llm"
+    },
+    "manifest.json": {
+      "path": "manifest.json",
+      "language": "json",
+      "purpose": "Module about manifest",
+      "main_symbols": [],
+      "exports": [],
+      "keywords": [
+        "manifest",
+        "json"
+      ],
+      "depends_on": [],
+      "size_bytes": 444,
+      "importance_score": 0.0,
+      "generated_at": "2026-05-07T03:53:05.822305+00:00"
+    },
+    "README.md": {
+      "path": "README.md",
+      "language": "markdown",
+      "purpose": "README.md documentation: 南京邮电大学网页",
+      "main_symbols": [],
+      "exports": [],
+      "keywords": [
+        "readme",
+        "md",
+        "南京邮电大学网页",
+        "How to open"
+      ],
+      "depends_on": [],
+      "size_bytes": 342,
+      "importance_score": 0.0,
+      "generated_at": "2026-05-07T03:53:05.824992+00:00"
+    },
+    "workspace/index.html": {
+      "path": "workspace/index.html",
+      "language": "html",
+      "purpose": "该文件是展示大学校名的带动效静态HTML页面，当前任务为将页面内所有「南京邮电大学」文本替换为「北京邮电大学」",
+      "main_symbols": [
+        "title标签",
+        "h1展示标签",
+        "bgFlow背景流动动画",
+        "textShine文字流光动画",
+        "enterAnim元素入场动画"
+      ],
+      "exports": [],
+      "keywords": [
+        "静态HTML",
+        "CSS动效",
+        "渐变背景",
+        "响应式文字",
+        "南京邮电大学",
+        "北京邮电大学",
+        "文本替换"
+      ],
+      "depends_on": [],
+      "size_bytes": 2013,
+      "importance_score": 7.5,
+      "generated_at": "2026-05-07T03:53:35.116991+00:00",
+      "summary_mode": "llm"
+    }
+  },
+  "summary_mode": "llm_enriched",
+  "enriched_files": 2,
+  "candidate_files": 2
+}

@@ -1,0 +1,17 @@
+{
+  "path": "workspace/index.html",
+  "language": "html",
+  "purpose": "workspace/index.html documentation: 南京邮电大学",
+  "main_symbols": [],
+  "exports": [],
+  "keywords": [
+    "workspace",
+    "index",
+    "html",
+    "南京邮电大学"
+  ],
+  "depends_on": [],
+  "size_bytes": 2013,
+  "importance_score": 0.0,
+  "generated_at": "2026-05-07T03:53:05.826130+00:00"
+}
